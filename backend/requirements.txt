@@ -1,0 +1,9 @@
+fastapi==0.109.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.22
+reportlab==4.0.7
+qrcode[pil]==7.4.2
+Pillow==12.1.1
+web3==6.11.3
+python-dotenv==1.0.0
+requests==2.31.0

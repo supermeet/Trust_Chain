@@ -1,0 +1,58 @@
+{
+  "ElevenLabs": {
+    "type": "voice",
+    "has_watermark": true,
+    "has_content_filter": true,
+    "access_type": "api_gated_with_identity",
+    "known_incidents": 2
+  },
+  "HiFi-GAN v2": {
+    "type": "voice",
+    "has_watermark": false,
+    "has_content_filter": false,
+    "access_type": "open_source",
+    "known_incidents": 47
+  },
+  "Stable Diffusion": {
+    "type": "image",
+    "has_watermark": false,
+    "has_content_filter": true,
+    "access_type": "open_source",
+    "known_incidents": 120
+  },
+  "DALL-E 3": {
+    "type": "image",
+    "has_watermark": true,
+    "has_content_filter": true,
+    "access_type": "api_gated_with_identity",
+    "known_incidents": 8
+  },
+  "Midjourney": {
+    "type": "image",
+    "has_watermark": true,
+    "has_content_filter": true,
+    "access_type": "api_gated_basic",
+    "known_incidents": 15
+  },
+  "FaceSwap": {
+    "type": "video",
+    "has_watermark": false,
+    "has_content_filter": false,
+    "access_type": "open_source",
+    "known_incidents": 89
+  },
+  "DeepFaceLab": {
+    "type": "video",
+    "has_watermark": false,
+    "has_content_filter": false,
+    "access_type": "open_source",
+    "known_incidents": 156
+  },
+  "Unknown Model": {
+    "type": "unknown",
+    "has_watermark": false,
+    "has_content_filter": false,
+    "access_type": "open_source",
+    "known_incidents": 50
+  }
+}
