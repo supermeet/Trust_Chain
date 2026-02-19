@@ -1,2 +1,16 @@
-backend/__pycache__/
-backend/**/__pycache__/
+# Python
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+.env
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# DB & uploads
+*.db
+/tmp/
+
