@@ -126,7 +126,7 @@ npm run dev                     # http://localhost:5173
 ## Deploy the Solidity Smart Contract (Remix IDE)
 
 1. Open [https://remix.ethereum.org](https://remix.ethereum.org).
-2. Create a new file, paste the contents of `backend/contracts/TrustChain.sol`.
+2. Create a new file, paste the contents of `backend/blockchain/EvidenceRegistry.sol`.
 3. In **Solidity Compiler** tab, select version `0.8.x` and click **Compile**.
 4. In **Deploy & Run** tab:
    - Environment → **Injected Provider - MetaMask**
@@ -153,13 +153,14 @@ npm run dev                     # http://localhost:5173
 1. Sign up at [https://app.infura.io](https://app.infura.io).
 2. Create a new project → **Web3 API**.
 3. Copy the **API Key** from the project dashboard.
-4. Add to `backend/.env`:
+4. Add to `backend/.env` — replace `YOUR_KEY` in the pre-configured URL:
    ```
-   INFURA_API_KEY=your_infura_key_here
+   SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/YOUR_KEY
    WALLET_PRIVATE_KEY=your_wallet_private_key_here
+   CONTRACT_ADDRESS=0xYourDeployedContractAddress
    ```
 
-> ⚠️ **Never commit private keys.** `.env` is in `.gitignore` by default.
+> ⚠️ **Never commit private keys.** `.env` is listed in `.gitignore` by default. See `backend/.env.example` for the full template.
 
 ---
 
@@ -184,29 +185,33 @@ By default `DETECTION_MODE=mock` returns deterministic demo results without requ
 
 | Method | Endpoint | Description | Request | Response |
 |--------|----------|-------------|---------|----------|
-| `POST` | `/analyze` | Upload a file for deepfake analysis | `multipart/form-data` — field `file` (audio/video) | JSON: `analysis_id`, `is_deepfake`, `confidence`, `liability_score`, `blockchain_tx` |
-| `GET` | `/results/{analysis_id}` | Retrieve stored analysis result | Path param `analysis_id` (int) | JSON: full analysis record |
-| `GET` | `/certificate/{analysis_id}` | Download the PDF certificate | Path param `analysis_id` (int) | `application/pdf` binary stream |
-| `GET` | `/history` | List all past analyses | — | JSON array of analysis summaries |
-| `GET` | `/health` | Service health check | — | `{"status": "ok"}` |
+| `GET`  | `/api/health` | Service health check | — | `{"status": "ok"}` |
+| `POST` | `/api/upload` | Upload a file for deepfake analysis and evidence registration | `multipart/form-data` — field `file` (audio/video) | JSON: `id`, `sha256`, `is_deepfake`, `confidence`, `liability`, `tx_hash`, `pdf_url` |
+| `GET`  | `/api/evidence/{id}` | Retrieve a stored evidence record | Path param `id` (string) | JSON: full evidence record |
+| `POST` | `/api/verify` | Re-hash an uploaded file and confirm on-chain integrity | `multipart/form-data` — field `file` | JSON: `match`, `sha256`, `on_chain_hash` |
+| `GET`  | `/api/report/{id}/pdf` | Download the court-ready PDF certificate | Path param `id` (string) | `application/pdf` binary stream |
 
-### Example — Analyze a file
+### Example — Upload a file for analysis
 
 ```bash
-curl -X POST http://localhost:8000/analyze \
+curl -X POST http://localhost:8000/api/upload \
   -F "file=@/path/to/video.mp4"
 ```
 
 ```json
 {
-  "analysis_id": 42,
+  "id": "a3f5c9d1",
   "filename": "video.mp4",
-  "file_hash": "a3f5c9...",
+  "sha256": "a3f5c9...",
   "is_deepfake": true,
   "confidence": 0.94,
-  "liability_score": 87,
-  "blockchain_tx": "0xabc123...",
-  "certificate_url": "/certificate/42"
+  "liability": {
+    "user": {"percentage": 52, "raw_score": 0.77},
+    "platform": {"percentage": 31, "raw_score": 0.46},
+    "architect": {"percentage": 17, "raw_score": 0.25}
+  },
+  "tx_hash": "0xabc123...",
+  "pdf_url": "/api/report/a3f5c9d1/pdf"
 }
 ```
 
@@ -214,27 +219,47 @@ curl -X POST http://localhost:8000/analyze \
 
 ## How the Liability Score Is Calculated
 
-The liability score (0 – 100) quantifies the legal risk associated with a piece of media:
+TrustChain computes liability across **three independent parties** — the end user, the platform, and the AI model architect — each scored on weighted sub-factors. Scores are then normalised to percentage shares that sum to 100 %.
+
+### User liability (max raw score 1.00)
+
+| Factor | Max pts | Legal basis |
+|--------|---------|-------------|
+| Intent (disclosure stripped, distributed) | 0.35 | IPC §66E / IT Act §72A |
+| Action (distribution + stripping) | 0.30 | IPC §500 / Defamation Act |
+| Victim impersonation (consent) | 0.20 | IT Act §43A |
+| Prior offences | 0.15 | CrPC §110 / Repeat Offender doctrine |
+
+### Platform liability (max raw score 1.00)
+
+| Factor | Max pts | Legal basis |
+|--------|---------|-------------|
+| Detection capability gap | 0.25 | IT Rules 2021 Rule 4(4) |
+| Takedown response time (>36 h = max penalty) | 0.35 | IT Rules 2021 Rule 4(1)(d) |
+| Amplification reach | 0.25 | EU DSA Art. 34 — Systemic risk |
+| Safe harbour erosion | 0.15 | IT Act §79 |
+
+### AI Architect liability (max raw score 1.00)
+
+| Factor | Max pts | Legal basis |
+|--------|---------|-------------|
+| Safeguards (watermark / content filter) | 0.40 | EU AI Act Art. 9 |
+| Access control model | 0.30 | EU AI Act Art. 13 |
+| Known incident history | 0.30 | Product liability — negligent design |
+
+### Normalisation
 
 ```
-liability_score = round(
-    (deepfake_confidence × 0.60) +
-    (metadata_anomaly_score × 0.25) +
-    (blockchain_verification_bonus × 0.15)
-) × 100
+user_pct     = round(raw_user     / (raw_user + raw_platform + raw_architect) * 100)
+platform_pct = round(raw_platform / (raw_user + raw_platform + raw_architect) * 100)
+architect_pct = 100 − user_pct − platform_pct
 ```
 
-| Component | Weight | Description |
-|-----------|--------|-------------|
-| `deepfake_confidence` | 60 % | Model confidence that the file is synthetic |
-| `metadata_anomaly_score` | 25 % | Inconsistencies in EXIF / container metadata |
-| `blockchain_verification_bonus` | 15 % | Reward for on-chain hash registration |
+### Legal admissibility
 
-### Legal Basis
-
-- **Section 65B, Indian Evidence Act** — a score ≥ 70 triggers generation of a §65B-compliant certificate, satisfying the authenticity requirement for electronic evidence admissibility.
+- **Section 65B, Indian Evidence Act** — the PDF certificate satisfies the §65B authenticity requirement for electronic evidence.
 - **BSA §63** — the blockchain transaction hash serves as an immutable audit trail recognised as primary electronic evidence.
-- **IT Act §66D** — the liability score assists courts in establishing intent and the degree of personation via computer resources.
+- **IT Act §66D / §72A** — the user liability factors map directly to personalisation and privacy-breach offences.
 
 ---
 
@@ -251,14 +276,21 @@ liability_score = round(
 ```
 Trust_Chain/
 ├── backend/
-│   ├── main.py                 # FastAPI application entry point
-│   ├── detection.py            # Deepfake detection (mock + real)
-│   ├── blockchain.py           # Ethereum interaction via web3.py
-│   ├── pdf_generator.py        # ReportLab certificate builder
-│   ├── liability.py            # Liability scoring engine
+│   ├── main.py                 # FastAPI application & all route handlers
+│   ├── hash_engine.py          # SHA-256 file hashing
 │   ├── database.py             # SQLite helpers
-│   ├── contracts/
-│   │   └── TrustChain.sol      # Solidity smart contract
+│   ├── blockchain/
+│   │   ├── contract.py         # web3.py Ethereum interaction
+│   │   └── EvidenceRegistry.sol  # Solidity smart contract
+│   ├── detection/
+│   │   ├── audio_detector.py   # Wav2Vec2 / mock audio deepfake detector
+│   │   └── video_detector.py   # EfficientNet / mock video deepfake detector
+│   ├── legal/
+│   │   └── pdf_generator.py    # ReportLab court-ready certificate builder
+│   ├── liability/
+│   │   ├── scorer.py           # Three-party liability scoring engine
+│   │   └── model_registry.json # Known AI model metadata
+│   ├── .env.example
 │   ├── requirements.txt
 │   └── Dockerfile
 ├── frontend/
