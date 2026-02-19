@@ -101,7 +101,7 @@ export default function Results() {
                 : 'bg-green-900 text-green-300 border border-green-700'
             }`}
           >
-            {isSynthetic ? '⚠ SYNTHETIC' : '✓ AUTHENTIC'}
+            {isSynthetic ? '⚠' : '✓'} {data.detection.label || (isSynthetic ? 'SYNTHETIC' : 'AUTHENTIC')}
           </span>
         </div>
 
