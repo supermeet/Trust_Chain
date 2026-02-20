@@ -1,5 +1,6 @@
 import os
 import uuid
+import json
 import shutil
 from datetime import datetime, timezone
 
@@ -36,6 +37,47 @@ _AUDIO_EXTS = {".mp3", ".wav", ".flac", ".m4a", ".ogg"}
 
 def _ext(filename: str) -> str:
     return os.path.splitext(filename)[1].lower()
+
+
+def _reshape_record(record: dict) -> dict:
+    """Reshape the flat DB record into the nested format the frontend expects."""
+    detection_result = record.get("detection_result", {})
+    if isinstance(detection_result, str):
+        try:
+            detection_result = json.loads(detection_result)
+        except (json.JSONDecodeError, TypeError):
+            detection_result = {}
+
+    liability_scores = record.get("liability_scores", {})
+    if isinstance(liability_scores, str):
+        try:
+            liability_scores = json.loads(liability_scores)
+        except (json.JSONDecodeError, TypeError):
+            liability_scores = {}
+
+    is_synthetic = detection_result.get("is_synthetic", False)
+
+    return {
+        "id": record.get("id", ""),
+        "filename": record.get("filename", ""),
+        "file_hash": record.get("file_hash", ""),
+        "detection_type": record.get("detection_type", ""),
+        "detection": {
+            "confidence": detection_result.get("confidence", 0.0),
+            "is_synthetic": is_synthetic,
+            "label": "SYNTHETIC" if is_synthetic else "AUTHENTIC",
+            "explanation": detection_result.get("explanation", ""),
+            "flagged_frames": detection_result.get("flagged_frames", []),
+            "features": detection_result.get("features", {}),
+        },
+        "liability_scores": liability_scores,
+        "blockchain": {
+            "tx_id": record.get("blockchain_tx_id", ""),
+            "timestamp": record.get("timestamp", ""),
+        },
+        "pdf_download_url": f"/api/report/{record.get('id', '')}/pdf",
+        "timestamp": record.get("timestamp", ""),
+    }
 
 
 @app.get("/api/health")
@@ -98,6 +140,8 @@ async def upload_evidence(
         liability_scores = compute_liability(liability_ctx)
 
         timestamp = datetime.now(timezone.utc).isoformat()
+        is_synthetic = detection_result.get("is_synthetic", False)
+
         pdf_evidence = {
             "event_id": event_id,
             "file_hash": file_hash,
@@ -116,7 +160,7 @@ async def upload_evidence(
             "detection_type": detection_type,
             "detection_confidence": detection_result.get("confidence", 0.0),
             "detection_result": detection_result,
-            "is_synthetic": detection_result.get("is_synthetic", False),
+            "is_synthetic": is_synthetic,
             "blockchain_tx_id": blockchain_tx_id,
             "liability_scores": liability_scores,
             "pdf_path": pdf_path,
@@ -127,11 +171,22 @@ async def upload_evidence(
 
         return {
             "event_id": event_id,
+            "id": event_id,
             "file_hash": file_hash,
             "detection_type": detection_type,
-            "detection": detection_result,
-            "liability": liability_scores,
-            "blockchain_tx_id": blockchain_tx_id,
+            "detection": {
+                "confidence": detection_result.get("confidence", 0.0),
+                "is_synthetic": is_synthetic,
+                "label": "SYNTHETIC" if is_synthetic else "AUTHENTIC",
+                "explanation": detection_result.get("explanation", ""),
+                "flagged_frames": detection_result.get("flagged_frames", []),
+                "features": detection_result.get("features", {}),
+            },
+            "liability_scores": liability_scores,
+            "blockchain": {
+                "tx_id": blockchain_tx_id,
+                "timestamp": timestamp,
+            },
             "pdf_download_url": f"/api/report/{event_id}/pdf",
             "timestamp": timestamp,
         }
@@ -145,7 +200,7 @@ def get_evidence_record(id: str):
     record = get_evidence(id)
     if record is None:
         raise HTTPException(status_code=404, detail="Evidence not found")
-    return record
+    return _reshape_record(record)
 
 
 @app.post("/api/verify")
