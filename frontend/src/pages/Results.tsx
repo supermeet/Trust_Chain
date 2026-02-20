@@ -3,33 +3,11 @@ import { useParams } from 'react-router-dom'
 import axios from 'axios'
 import LiabilityCard from '../components/LiabilityCard'
 
-interface PartyScore {
-  percentage: number
-  raw_score: number
-  factors: Record<string, number>
-}
-
-interface EvidenceResult {
-  id: string
-  detection: {
-    confidence: number
-    label: string
-    explanation: string
-  }
-  liability_scores: {
-    user: PartyScore
-    platform: PartyScore
-    architect: PartyScore
-  }
-  blockchain: {
-    tx_id: string
-    timestamp: string
-  }
-}
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 export default function Results() {
   const { id } = useParams<{ id: string }>()
-  const [data, setData] = useState<EvidenceResult | null>(null)
+  const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -80,14 +58,30 @@ export default function Results() {
     )
   }
 
-  const isSynthetic = data.detection.confidence >= 0.5
-  const confidencePct = (data.detection.confidence * 100).toFixed(1)
+  // Safely extract detection data (handles both old and new backend shapes)
+  const detection = data.detection || data.detection_result || {}
+  const confidence = detection.confidence ?? data.detection_confidence ?? 0
+  const explanation = detection.explanation ?? ''
+  const isSynthetic = confidence >= 0.5
+  const confidencePct = (confidence * 100).toFixed(1)
+  const label = detection.label || (isSynthetic ? 'SYNTHETIC' : 'AUTHENTIC')
+
+  // Safely extract blockchain data
+  const blockchain = data.blockchain || {}
+  const txId = blockchain.tx_id || data.blockchain_tx_id || ''
+  const blockchainTimestamp = blockchain.timestamp || data.timestamp || ''
+
+  // Safely extract liability scores
+  const liabilityScores = data.liability_scores || data.liability || null
+
+  // Event ID
+  const eventId = data.id || id
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-white mb-1">Analysis Results</h1>
-        <p className="text-gray-500 text-sm font-mono">Event ID: {data.id}</p>
+        <p className="text-gray-500 text-sm font-mono">Event ID: {eventId}</p>
       </div>
 
       {/* Detection result */}
@@ -101,14 +95,14 @@ export default function Results() {
                 : 'bg-green-900 text-green-300 border border-green-700'
             }`}
           >
-            {isSynthetic ? '⚠' : '✓'} {data.detection.label || (isSynthetic ? 'SYNTHETIC' : 'AUTHENTIC')}
+            {isSynthetic ? '⚠' : '✓'} {label}
           </span>
         </div>
 
         <div className="mb-4">
           <div className="flex items-center justify-between mb-1">
             <span className="text-sm text-gray-400">Synthetic confidence</span>
-            <span className={`text-lg font-bold ${isSynthetic ? 'text-red-400' : 'text-green-400'}`}>
+            <span className={`text-lg font-bold ${isSynthetic ? 'text-red-400' : 'text-green-400'}`}>  
               {confidencePct}%
             </span>
           </div>
@@ -120,11 +114,13 @@ export default function Results() {
           </div>
         </div>
 
-        <p className="text-gray-300 text-sm leading-relaxed">{data.detection.explanation}</p>
+        <p className="text-gray-300 text-sm leading-relaxed">{explanation}</p>
       </div>
 
       {/* Liability */}
-      <LiabilityCard scores={data.liability_scores} />
+      {liabilityScores && liabilityScores.user && (
+        <LiabilityCard scores={liabilityScores} />
+      )}
 
       {/* Blockchain proof */}
       <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
@@ -132,18 +128,24 @@ export default function Results() {
         <div className="space-y-2 text-sm">
           <div className="flex flex-col sm:flex-row sm:items-center gap-1">
             <span className="text-gray-400 sm:w-28 shrink-0">Transaction</span>
-            <a
-              href={`https://sepolia.etherscan.io/tx/${data.blockchain.tx_id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-indigo-400 hover:text-indigo-300 font-mono text-xs break-all underline underline-offset-2"
-            >
-              {data.blockchain.tx_id}
-            </a>
+            {txId ? (
+              <a
+                href={`https://sepolia.etherscan.io/tx/${txId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-indigo-400 hover:text-indigo-300 font-mono text-xs break-all underline underline-offset-2"
+              >
+                {txId}
+              </a>
+            ) : (
+              <span className="text-gray-500 text-xs">Not available</span>
+            )}
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center gap-1">
             <span className="text-gray-400 sm:w-28 shrink-0">Timestamp</span>
-            <span className="text-gray-200">{new Date(data.blockchain.timestamp).toLocaleString()}</span>
+            <span className="text-gray-200">
+              {blockchainTimestamp ? new Date(blockchainTimestamp).toLocaleString() : 'N/A'}
+            </span>
           </div>
         </div>
       </div>
@@ -151,7 +153,7 @@ export default function Results() {
       {/* Actions */}
       <div className="flex flex-wrap gap-3">
         <a
-          href={`/api/report/${data.id}/pdf`}
+          href={`/api/report/${eventId}/pdf`}
           target="_blank"
           rel="noopener noreferrer"
           className="px-5 py-2.5 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
