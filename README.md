@@ -1,4 +1,4 @@
-# TrustChain 🔗🛡️
+# TrustChain 🔗
 
 > **Deepfake Detection · Blockchain Evidence Locking · Court-Ready Certificates**
 
@@ -34,20 +34,20 @@ Current tools either detect deepfakes *or* preserve evidence — TrustChain does
 │                                                                     │
 │  POST /analyze                                                      │
 │       │                                                             │
-│       ├──► SHA-256 Hash  ──────────────────────────────────────┐   │
+│       ├──► SHA-256 Hash  ───────────────────────────────────────┐   │
 │       │                                                         │   │
 │       ├──► Deepfake Detection                                   │   │
 │       │        ├── Audio  (Wav2Vec / mock)                      │   │
 │       │        └── Video  (EfficientNet / mock)                 │   │
 │       │                                                         │   │
-│       ├──► Blockchain Registry ◄───────────────────────────────┘   │
-│       │        └── Ethereum Sepolia  (web3.py + Infura)            │
-│       │             └── Smart Contract (Solidity)                  │
+│       ├──► Blockchain Registry ◄────────────────────────────────┘   │
+│       │        └── Ethereum Sepolia  (web3.py + Infura)             │
+│       │             └── Smart Contract (Solidity)                   │
 │       │                                                             │
 │       ├──► Liability Scoring Engine                                 │
-│       │        └── Weighted model (confidence + metadata)          │
+│       │        └── Weighted model (confidence + metadata)           │
 │       │                                                             │
-│       └──► PDF Certificate Generator  (ReportLab)                  │
+│       └──► PDF Certificate Generator  (ReportLab)                   │
 │                └── Stored in /tmp/trustchain_pdfs                   │
 │                                                                     │
 │  SQLite DB  ──  stores analysis records & certificate paths         │
@@ -160,7 +160,6 @@ npm run dev                     # http://localhost:5173
    CONTRACT_ADDRESS=0xYourDeployedContractAddress
    ```
 
-> ⚠️ **Never commit private keys.** `.env` is listed in `.gitignore` by default. See `backend/.env.example` for the full template.
 
 ---
 
@@ -320,8 +319,6 @@ Please follow [Conventional Commits](https://www.conventionalcommits.org/) for c
 
 ## License
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
----
 
-<p align="center">Built with ❤️ for a safer, verifiable internet.</p>
