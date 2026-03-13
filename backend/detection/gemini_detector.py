@@ -4,7 +4,7 @@ Gemini-Powered 4-Agent Deepfake Detection.
 Uses Google Gemini to analyze uploaded files from 4 different AI perspectives:
   1. FFT Spectral  — Frequency domain GAN fingerprint detection
   2. CNN Spatial   — Spatial pattern & artifact detection
-  3. RCN Temporal  — Temporal consistency analysis
+  3. RNN Temporal  — Temporal consistency analysis
   4. ELA           — Error Level / compression artifact detection
 
 Falls back to mock mode if no GEMINI_API_KEY is set.
@@ -40,7 +40,7 @@ MODEL_DEFINITIONS = [
         "xai_method": "Grad-CAM heatmap highlighting facial boundary regions",
     },
     {
-        "name": "RCN Temporal Analysis",
+        "name": "RNN Temporal Analysis",
         "description": "Recurrent Convolutional Network temporal consistency analysis detecting unnatural movements and blink patterns",
         "weight": 0.25,
         "xai_method": "Timeline anomaly graph showing temporal inconsistencies",
@@ -61,7 +61,7 @@ Analyze the provided file from 4 independent detection perspectives and return a
 The 4 analysis models you must simulate:
 1. **FFT Spectral Analysis** — Analyze frequency domain patterns. Look for the slightest hint of GAN fingerprints, unnatural frequency distributions, smoothing, or synthetic noise patterns.
 2. **CNN Spatial Detection** — Analyze spatial patterns at the pixel level. Look for blending artifacts, asymmetrical lighting, impossible reflections, strange teeth/eyes/fingers, and unnatural textures.
-3. **RCN Temporal Analysis** — Analyze temporal consistency. For video/audio: look for unnatural micro-expressions, robotic movements, irregular blink patterns, lip-sync issues, and unnatural breathing. For images: analyze spatial coherence and physics.
+3. **RNN Temporal Analysis** — Analyze temporal consistency. For video/audio: look for unnatural micro-expressions, robotic movements, irregular blink patterns, lip-sync issues, and unnatural breathing. For images: analyze spatial coherence and physics.
 4. **ELA Compression Analysis** — Analyze compression artifacts. Look for inconsistent error levels that indicate splicing, localized editing, or generative origin.
 
 You MUST respond with ONLY valid JSON in this exact format (no markdown, no extra text):
@@ -82,10 +82,10 @@ You MUST respond with ONLY valid JSON in this exact format (no markdown, no extr
       "explanation": "1-2 sentence explanation of CNN findings"
     },
     {
-      "name": "RCN Temporal Analysis",
+      "name": "RNN Temporal Analysis",
       "confidence": 0.XX,
       "is_flagged": true/false,
-      "explanation": "1-2 sentence explanation of RCN findings"
+      "explanation": "1-2 sentence explanation of RNN findings"
     },
     {
       "name": "ELA Compression Analysis",

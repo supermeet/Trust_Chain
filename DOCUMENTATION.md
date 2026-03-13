@@ -27,7 +27,7 @@ The legal system is struggling to keep up:
 
 | Capability | What it does |
 |------------|-------------|
-| **Multi-Modal AI Detection** | 4 independent AI models (FFT, CNN, RCN, ELA) analyse every uploaded file for manipulation |
+| **Multi-Modal AI Detection** | 4 independent AI models (FFT, CNN, RNN, ELA) analyse every uploaded file for manipulation |
 | **Blockchain Anchoring** | SHA-256 hash is permanently registered on Ethereum Sepolia with immutable timestamps |
 | **Content Provenance (C2PA)** | Standards-compliant manifest traces evidence from capture to court with trust tier classification |
 | **SMS Beacon** | Telecom-timestamped backup anchor that works offline — no internet required |
@@ -79,7 +79,7 @@ Upload File
 [2] Gemini-Powered 4-Model AI Detection
     │   ├── FFT Spectral Analysis (frequency domain)
     │   ├── CNN Spatial Detection (pixel-level)
-    │   ├── RCN Temporal Analysis (temporal consistency)
+    │   ├── RNN Temporal Analysis (temporal consistency)
     │   └── ELA Compression Analysis (error levels)
     ↓
 [3] Blockchain Registration (Ethereum Sepolia)
@@ -269,7 +269,7 @@ Trust_Chain/
 |-------|--------|---------------|------------|
 | **FFT Spectral Analysis** | 25% | Frequency domain — detects GAN fingerprints, unnatural frequency distributions | Spectral comparison chart |
 | **CNN Spatial Detection** | 30% | Spatial patterns — pixel-level artifacts, blending boundaries, lighting inconsistencies | Grad-CAM heatmap |
-| **RCN Temporal Analysis** | 25% | Temporal consistency — unnatural movements, blink patterns, lip-sync issues | Timeline anomaly graph |
+| **RNN Temporal Analysis** | 25% | Temporal consistency — unnatural movements, blink patterns, lip-sync issues | Timeline anomaly graph |
 | **ELA Compression Analysis** | 20% | Compression artifacts — inconsistent error levels indicating splicing/AI generation | Error level overlay |
 
 **Ensemble Method:** Weighted vote — each model's confidence is multiplied by its weight, then summed to produce the final ensemble confidence.
@@ -504,7 +504,7 @@ Trust_Chain/
 
 **Displays (in order):**
 1. **Detection** — Confidence ring (animated SVG circle), synthetic/authentic badge, ensemble confidence percentage, model agreement
-2. **Multi-Modal AI Analysis** — 4 model cards (FFT, CNN, RCN, ELA), each showing confidence bar, weight, flagged/pass status, XAI method
+2. **Multi-Modal AI Analysis** — 4 model cards (FFT, CNN, RNN, ELA), each showing confidence bar, weight, flagged/pass status, XAI method
 3. **C2PA Provenance** — Manifest ID, C2PA version, station, device, AI triage result, trust tier badge, expandable raw JSON
 4. **SMS Beacon** — Beacon reference, hash prefix, station code, network delay, SMS cost, cross-validation checks (✓/✗)
 5. **Liability** — LiabilityCard component with User/Platform/AI Architect percentages
