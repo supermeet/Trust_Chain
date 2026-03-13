@@ -4,19 +4,7 @@ import axios from 'axios'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-function TierBadge({ tier }: { tier: string }) {
-    const config: Record<string, { bg: string; text: string; label: string }> = {
-        TIER_1: { bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-700', label: 'Tier 1 · Hardware' },
-        TIER_2: { bg: 'bg-blue-50 border-blue-200', text: 'text-blue-700', label: 'Tier 2 · Software' },
-        TIER_3: { bg: 'bg-amber-50 border-amber-200', text: 'text-amber-700', label: 'Tier 3 · Citizen' },
-    }
-    const c = config[tier] || config.TIER_3
-    return (
-        <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full border ${c.bg} ${c.text}`}>
-            {c.label}
-        </span>
-    )
-}
+
 
 function StatusDot({ synthetic }: { synthetic: boolean }) {
     return (
@@ -93,13 +81,11 @@ export default function Dashboard() {
                         <div className="col-span-4">Evidence</div>
                         <div className="col-span-2">Type</div>
                         <div className="col-span-2">Detection</div>
-                        <div className="col-span-2">Trust Tier</div>
-                        <div className="col-span-2">Date</div>
+                        <div className="col-span-4">Date</div>
                     </div>
 
                     {filtered.map((record: any) => {
                         const detection = record.detection || {}
-                        const tier = record.c2pa_manifest?.trust_tier?.level || 'TIER_3'
                         const isSynthetic = detection.is_synthetic
                         const confidence = detection.confidence ?? 0
 
@@ -131,13 +117,8 @@ export default function Dashboard() {
                                         </span>
                                     </div>
 
-                                    {/* Trust Tier */}
-                                    <div className="col-span-2 mb-2 sm:mb-0">
-                                        <TierBadge tier={tier} />
-                                    </div>
-
                                     {/* Date */}
-                                    <div className="col-span-2">
+                                    <div className="col-span-4">
                                         <span className="text-xs text-[--text-dim]">
                                             {record.timestamp ? new Date(record.timestamp).toLocaleDateString() : '—'}
                                         </span>

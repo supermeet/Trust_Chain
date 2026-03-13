@@ -7,7 +7,8 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from dotenv import load_dotenv
-load_dotenv()  # Load .env BEFORE importing modules that read os.getenv()
+_ENV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+load_dotenv(_ENV_PATH, override=True)  # Load absolute .env
 
 from fastapi import FastAPI, File, Form, UploadFile, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -121,6 +122,16 @@ def _reshape_record(record: dict) -> dict:
 def health():
     return {"status": "ok"}
 
+@app.get("/api/debug-env")
+def debug_env():
+    import os
+    from dotenv import dotenv_values
+    return {
+        "os_getenv": os.getenv("GEMINI_API_KEY", ""),
+        "dotenv_values": dotenv_values(_ENV_PATH).get("GEMINI_API_KEY", ""),
+        "env_path": _ENV_PATH,
+        "env_exists": os.path.exists(_ENV_PATH)
+    }
 
 @app.post("/api/upload")
 async def upload_evidence(

@@ -78,7 +78,7 @@ export default function Landing() {
                             { num: '2', title: 'Hash', desc: 'A SHA-256 cryptographic fingerprint is generated instantly.' },
                             { num: '3', title: 'Multi-Modal Detect', desc: '4 independent AI models scan for deepfakes: spatial, temporal, frequency, and camera noise analysis.' },
                             { num: '4', title: 'Anchor', desc: 'The file hash is permanently registered on the Ethereum blockchain with SMS beacon backup.' },
-                            { num: '5', title: 'Provenance', desc: 'A C2PA content manifest is generated with trust tier classification (Tier 1/2/3).' },
+                            { num: '5', title: 'Provenance', desc: 'A C2PA content manifest is generated to track origin and manipulation.' },
                             { num: '6', title: 'Chain of Custody', desc: 'Every custodian transfer is logged with digital signatures and role verification.' },
                             { num: '7', title: 'Certify', desc: 'A court-ready PDF certificate is generated with all findings, blockchain proof, and legal compliance.' },
                         ].map((step, i) => (

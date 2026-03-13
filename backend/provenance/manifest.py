@@ -21,13 +21,6 @@ def generate_manifest(
     is_synthetic = detection_result.get("is_synthetic", False)
     ai_triage = "FLAG" if is_synthetic else "PASS"
 
-    # Determine trust tier based on source
-    trust_tier = rng.choice(["TIER_1", "TIER_2", "TIER_3"])
-    tier_labels = {
-        "TIER_1": "Hardware-attested (Sentinel Pro)",
-        "TIER_2": "Software-sealed (TrustChain Lite)",
-        "TIER_3": "Citizen-submitted (Nagarik Mode)",
-    }
 
     manifest = {
         "manifest_id": f"urn:c2pa:trustchain:{evidence_id[:12]}",
@@ -59,35 +52,15 @@ def generate_manifest(
                 "pad": 0,
             },
 
-            "le.station_context": {
-                "station_id": station_id,
-                "device_id": f"DEV-{rng.randint(1000, 9999)}",
-                "camera_id": f"CAM-{rng.randint(1, 16):02d}",
-                "gps": {
-                    "latitude": round(18.5204 + rng.uniform(-0.1, 0.1), 6),
-                    "longitude": round(73.8567 + rng.uniform(-0.1, 0.1), 6),
-                },
-            },
-
             "le.ai_triage": {
                 "result": ai_triage,
                 "confidence": round(ai_confidence, 4),
                 "model": "EfficientNet-B4-DF-v2.1",
                 "framework": "TensorRT",
             },
-
-            "le.device_attestation": {
-                "type": "HARDWARE_TEE" if trust_tier == "TIER_1" else "SOFTWARE_ONLY",
-                "secure_boot": trust_tier == "TIER_1",
-                "platform": "Jetson Orin Nano" if trust_tier == "TIER_1" else "Windows x86",
-            },
         },
 
-        "trust_tier": {
-            "level": trust_tier,
-            "label": tier_labels[trust_tier],
-            "weight": {"TIER_1": "Highest", "TIER_2": "Standard", "TIER_3": "Requires review"}[trust_tier],
-        },
+
 
         "signature": {
             "algorithm": "COSE_Sign1",

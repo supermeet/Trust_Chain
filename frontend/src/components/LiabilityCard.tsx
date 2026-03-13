@@ -42,21 +42,18 @@ function getFactorEntries(factors: any): [string, any][] {
 export default function LiabilityCard({ scores }: LiabilityCardProps) {
   if (!scores) return null
 
-  const total = PARTY_CONFIG.reduce((sum, { key }) => sum + getPercentage(scores[key]), 0)
-
   return (
     <div>
       <h3 className="text-sm font-semibold text-[--text] mb-5">Liability distribution</h3>
 
-      {/* Stacked bar */}
       <div className="flex rounded-full overflow-hidden h-3 mb-4 w-full bg-[--bg-secondary]">
         {PARTY_CONFIG.map(({ key, color }) => {
-          const pct = total > 0 ? (getPercentage(scores[key]) / total) * 100 : 33.33
+          const rawPct = getPercentage(scores[key])
           return (
             <div
               key={key}
               className="transition-all"
-              style={{ width: `${pct}%`, backgroundColor: color }}
+              style={{ width: `${Math.max(0, rawPct)}%`, backgroundColor: color }}
             />
           )
         })}

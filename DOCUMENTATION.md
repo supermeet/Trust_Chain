@@ -391,13 +391,7 @@ Trust_Chain/
 - `le.ai_triage` — AI detection result and confidence
 - `le.device_attestation` — TEE type, secure boot status, platform
 
-**Trust Tiers:**
 
-| Tier | Source | Attestation | Court Weight |
-|------|--------|-------------|--------------|
-| **TIER 1** | Hardware-attested (Sentinel Pro) | Hardware TEE + Secure Boot | Highest |
-| **TIER 2** | Software-sealed (TrustChain Lite) | Software-only | Standard |
-| **TIER 3** | Citizen-submitted (Nagarik Mode) | Self-reported | Requires review |
 
 ---
 
@@ -661,8 +655,7 @@ Trust_Chain/
 ## 2.8 Future Enhancements
 
 1. **Real Ethereum Mainnet** deployment for production evidence registration
-2. **Hardware TEE integration** (Tier 1) for Sentinel Pro devices
-3. **Real SMS gateway** integration (Twilio / BSNL) for actual beacon transmission
+2. **Real SMS gateway** integration (Twilio / BSNL) for actual beacon transmission
 4. **Multi-language support** for the frontend (Hindi, Marathi, etc.)
 5. **Role-based authentication** for custody management
 6. **Batch upload** support for processing multiple files

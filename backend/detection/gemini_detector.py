@@ -15,9 +15,11 @@ import json
 import random
 import base64
 import mimetypes
+import traceback
 
 try:
-    import google.generativeai as genai
+    from google import genai
+    from google.genai import types
     HAS_GENAI = True
 except ImportError:
     HAS_GENAI = False
@@ -51,20 +53,21 @@ MODEL_DEFINITIONS = [
     },
 ]
 
-_GEMINI_PROMPT = """You are an expert forensic AI system that analyzes media files for deepfake/AI-generated content manipulation.
+_GEMINI_PROMPT = """You are a highly skeptical, expert forensic AI system designed to catch deepfakes, cheapfakes, and AI-generated media. 
+Your primary goal is to PROTECT the public from misinformation. You must scrutinize the provided file with extreme prejudice.
 
 Analyze the provided file from 4 independent detection perspectives and return a structured JSON response.
 
 The 4 analysis models you must simulate:
-1. **FFT Spectral Analysis** — Analyze frequency domain patterns. Look for GAN fingerprints, unnatural frequency distributions, and spectral artifacts typical of AI-generated content.
-2. **CNN Spatial Detection** — Analyze spatial patterns at the pixel level. Look for blending artifacts, unnatural edges, inconsistent lighting, and texture anomalies.
-3. **RCN Temporal Analysis** — Analyze temporal consistency. Look for unnatural movements, irregular blink patterns, lip-sync issues, and frame-to-frame inconsistencies. For images, analyze spatial coherence instead.
-4. **ELA Compression Analysis** — Analyze compression artifacts. Look for inconsistent error levels across the image/frames that indicate splicing or AI generation.
+1. **FFT Spectral Analysis** — Analyze frequency domain patterns. Look for the slightest hint of GAN fingerprints, unnatural frequency distributions, smoothing, or synthetic noise patterns.
+2. **CNN Spatial Detection** — Analyze spatial patterns at the pixel level. Look for blending artifacts, asymmetrical lighting, impossible reflections, strange teeth/eyes/fingers, and unnatural textures.
+3. **RCN Temporal Analysis** — Analyze temporal consistency. For video/audio: look for unnatural micro-expressions, robotic movements, irregular blink patterns, lip-sync issues, and unnatural breathing. For images: analyze spatial coherence and physics.
+4. **ELA Compression Analysis** — Analyze compression artifacts. Look for inconsistent error levels that indicate splicing, localized editing, or generative origin.
 
 You MUST respond with ONLY valid JSON in this exact format (no markdown, no extra text):
 {
   "is_synthetic": true/false,
-  "overall_explanation": "A detailed 2-3 sentence explanation of the overall finding",
+  "overall_explanation": "A detailed 2-3 sentence explanation of the overall finding, citing specific anomalies.",
   "models": [
     {
       "name": "FFT Spectral Analysis",
@@ -93,12 +96,12 @@ You MUST respond with ONLY valid JSON in this exact format (no markdown, no extr
   ]
 }
 
-Rules:
-- confidence is a float between 0.0 and 1.0 (higher = more likely synthetic/manipulated)
-- is_flagged is true if confidence > 0.5 for that model
-- Be honest and thorough in your analysis
-- If the file appears authentic, give low confidence scores
-- If the file appears manipulated/AI-generated, give high confidence scores
+CRITICAL FORENSIC RULES:
+- `confidence` is a float between 0.0 and 1.0 (higher = more likely synthetic/manipulated).
+- `is_flagged` is true if confidence > 0.5.
+- DO NOT GIVE THE BENEFIT OF THE DOUBT. If you see ANY anomaly (weird blending, unnatural motion, too-perfect skin, strange background physics), you MUST flag the file with high confidence (>0.75).
+- Today's AI models are very good. Absence of obvious glitches does NOT mean the file is real. Look for structural and spectral perfection which is a hallmark of synthesis.
+- If you suspect it is AI-generated, set `is_synthetic` to true.
 """
 
 
@@ -109,45 +112,55 @@ def _call_gemini(file_path: str, media_type: str) -> dict | None:
         return None
 
     try:
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-2.0-flash")
+        client = genai.Client(api_key=api_key)
 
-        # Read file and determine MIME type
-        mime_type, _ = mimetypes.guess_type(file_path)
-        if not mime_type:
-            mime_map = {
-                "image": "image/jpeg",
-                "video": "video/mp4",
-                "audio": "audio/mpeg",
-            }
-            mime_type = mime_map.get(media_type, "application/octet-stream")
+        gemini_file = None
+        try:
+            # Upload file directly to Gemini mapping (handles media formatting perfectly)
+            print(f"[Gemini Detector] Uploading {media_type} to Gemini File API...")
+            gemini_file = client.files.upload(file=file_path)
 
-        with open(file_path, "rb") as f:
-            file_data = f.read()
+            print(f"[Gemini Detector] Waiting for file {gemini_file.name} to become ACTIVE...")
+            import time
+            while True:
+                file_info = client.files.get(name=gemini_file.name)
+                if file_info.state.name == "ACTIVE":
+                    break
+                elif file_info.state.name == "FAILED":
+                    raise Exception("Gemini File API failed to process the media.")
+                print(".", end="", flush=True)
+                time.sleep(2)
+            print("\n[Gemini Detector] File is ACTIVE. Generating content...")
 
-        # Create the content with inline file data
-        file_part = {
-            "inline_data": {
-                "mime_type": mime_type,
-                "data": base64.b64encode(file_data).decode("utf-8"),
-            }
-        }
-
-        response = model.generate_content(
-            [_GEMINI_PROMPT, file_part],
-            generation_config=genai.types.GenerationConfig(
-                temperature=0.3,
-                response_mime_type="application/json",
-            ),
-        )
+            # Call Gemini
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=[_GEMINI_PROMPT, gemini_file],
+                config=types.GenerateContentConfig(
+                    temperature=0.3,
+                    response_mime_type="application/json",
+                ),
+            )
+            result_text = response.text.strip()
+        finally:
+            # Clean up the cloud file
+            if gemini_file:
+                try:
+                    client.files.delete(name=gemini_file.name)
+                except Exception as cleanup_err:
+                    print(f"[Gemini Detector] File cleanup failed: {cleanup_err}")
 
         # Parse the JSON response
-        result_text = response.text.strip()
         result = json.loads(result_text)
         return result
 
     except Exception as e:
-        print(f"[Gemini Detector] API call failed: {e}")
+        error_msg = f"[Gemini Detector] API call failed: {type(e).__name__}: {e}"
+        print(error_msg)
+        with open(os.path.join(os.path.dirname(__file__), "gemini_error.log"), "w") as log_f:
+            log_f.write(error_msg + "\n" + traceback.format_exc())
+            log_f.write(f"\nAPI Key used: {api_key[:15]}...\n")
+        traceback.print_exc()
         return None
 
 
@@ -201,12 +214,12 @@ def _build_detection_result(gemini_result: dict) -> dict:
         "explanation": explanation,
         "model_breakdown": model_breakdown,
         "agreement": agreement,
-        "ensemble_method": "Weighted Vote (Gemini-Powered)",
+        "ensemble_method": "Weighted Vote (AI-Powered)",
     }
 
 
-def _mock_detection(media_type: str) -> dict:
-    """Fallback mock detection when no Gemini API key is available."""
+def _mock_detection(media_type: str, reason: str = "Live analysis unavailable.") -> dict:
+    """Fallback mock detection when the AI API is unavailable or an error occurs."""
     rng = random.Random()
 
     model_breakdown = []
@@ -228,8 +241,7 @@ def _mock_detection(media_type: str) -> dict:
     agreement = f"{flags}/4"
 
     explanation = (
-        f"MOCK MODE: No GEMINI_API_KEY configured. "
-        f"Set GEMINI_API_KEY in your .env to enable real Gemini-powered analysis. "
+        f"MOCK MODE: {reason} "
         f"Mock ensemble confidence: {ensemble_confidence:.1%}. "
         f"Agreement: {agreement} models flag as synthetic."
     )
@@ -259,19 +271,19 @@ def detect_with_gemini(file_path: str, media_type: str) -> dict:
     api_key = os.getenv("GEMINI_API_KEY", "")
 
     if not api_key:
-        print("[Gemini Detector] No GEMINI_API_KEY set, using mock mode")
-        return _mock_detection(media_type)
+        print("[Gemini Detector] No API_KEY set, using mock mode")
+        return _mock_detection(media_type, "API infrastructure not configured.")
 
     if not HAS_GENAI:
-        print("[Gemini Detector] google-generativeai not installed, using mock mode")
-        return _mock_detection(media_type)
+        print("[Gemini Detector] google-genai not installed, using mock mode")
+        return _mock_detection(media_type, "AI core dependency missing.")
 
     print(f"[Gemini Detector] Analyzing {media_type} file with Gemini...")
     gemini_result = _call_gemini(file_path, media_type)
 
     if gemini_result is not None:
-        print("[Gemini Detector] Gemini analysis complete")
+        print("[Gemini Detector] Analysis complete")
         return _build_detection_result(gemini_result)
     else:
-        print("[Gemini Detector] Gemini call failed, falling back to mock mode")
-        return _mock_detection(media_type)
+        print("[Gemini Detector] Analysis call failed, falling back to mock mode")
+        return _mock_detection(media_type, "AI engine rejected the media format.")

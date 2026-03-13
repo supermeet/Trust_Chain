@@ -274,22 +274,11 @@ def generate_pdf(evidence_data: dict) -> str:
         ["Claim Generator", "TrustChain/1.0.0"],
         ["Hash Algorithm", "SHA-256"],
         ["Signature Algorithm", "COSE_Sign1"],
-        ["Trust Tier", "Classified at evidence registration"],
     ]
     story.append(_section_table(c2pa_rows, [5 * cm, _USABLE_W - 5 * cm], header_bg=_BLUE))
     story.append(Spacer(1, 0.3 * cm))
 
-    tier_rows = [
-        ["Tier", "Source", "Attestation", "Weight"],
-        ["TIER 1", "Hardware-attested (Sentinel Pro)", "Hardware TEE + Secure Boot", "Highest"],
-        ["TIER 2", "Software-sealed (TrustChain Lite)", "Software-only", "Standard"],
-        ["TIER 3", "Citizen-submitted (Nagarik Mode)", "Self-reported", "Requires review"],
-    ]
-    story.append(_section_table(
-        tier_rows,
-        [2 * cm, 5 * cm, 5 * cm, _USABLE_W - 12 * cm],
-        header_bg=_BLUE,
-    ))
+
 
     story.append(_divider(space_before=14, space_after=10))
 

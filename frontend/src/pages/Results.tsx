@@ -73,19 +73,7 @@ function ModelCard({ model }: { model: any }) {
   )
 }
 
-function TierBadge({ tier }: { tier: any }) {
-  const levelConfig: Record<string, { bg: string; text: string }> = {
-    TIER_1: { bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-700' },
-    TIER_2: { bg: 'bg-blue-50 border-blue-200', text: 'text-blue-700' },
-    TIER_3: { bg: 'bg-amber-50 border-amber-200', text: 'text-amber-700' },
-  }
-  const cfg = levelConfig[tier?.level] || levelConfig.TIER_3
-  return (
-    <span className={`text-xs font-semibold px-3 py-1 rounded-full border ${cfg.bg} ${cfg.text}`}>
-      {tier?.label || 'Unknown Tier'}
-    </span>
-  )
-}
+
 
 export default function Results() {
   const { id } = useParams<{ id: string }>()
@@ -222,7 +210,6 @@ export default function Results() {
         <div className="mb-14 animate-enter animate-enter-d2">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-[--text]">Content Provenance (C2PA)</h2>
-            <TierBadge tier={c2paManifest.trust_tier} />
           </div>
 
           <div className="bg-[--bg-secondary] rounded-2xl p-5 border border-[--border-light]">
@@ -236,22 +223,10 @@ export default function Results() {
                 <p className="text-xs text-[--text]">{c2paManifest.c2pa_version}</p>
               </div>
               <div>
-                <p className="text-[10px] text-[--text-dim] mb-1">Station</p>
-                <p className="text-xs text-[--text]">{c2paManifest.assertions?.['le.station_context']?.station_id || '—'}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-[--text-dim] mb-1">Device</p>
-                <p className="text-xs text-[--text]">{c2paManifest.assertions?.['le.device_attestation']?.platform || '—'}</p>
-              </div>
-              <div>
                 <p className="text-[10px] text-[--text-dim] mb-1">AI Triage</p>
                 <p className={`text-xs font-semibold ${c2paManifest.assertions?.['le.ai_triage']?.result === 'PASS' ? 'text-green-700' : 'text-red-600'}`}>
                   {c2paManifest.assertions?.['le.ai_triage']?.result || '—'}
                 </p>
-              </div>
-              <div>
-                <p className="text-[10px] text-[--text-dim] mb-1">Trust Weight</p>
-                <p className="text-xs text-[--text]">{c2paManifest.trust_tier?.weight || '—'}</p>
               </div>
             </div>
 
