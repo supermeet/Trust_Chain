@@ -15,6 +15,10 @@ const ACCEPTED_TYPES: Record<string, string> = {
   'audio/flac': 'flac',
   'audio/x-m4a': 'm4a',
   'audio/ogg': 'ogg',
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/bmp': 'bmp',
 }
 
 function formatBytes(bytes: number): string {
@@ -30,7 +34,7 @@ export default function FileUpload({ onFileSelect, selectedFile }: FileUploadPro
 
   function handleFile(file: File) {
     if (!ACCEPTED_TYPES[file.type]) {
-      setError('Unsupported file type. Please upload a video (mp4, avi, mov, mkv) or audio (mp3, wav, flac, m4a, ogg) file.')
+      setError('Unsupported file type. Please upload video, audio, or image.')
       return
     }
     setError(null)
@@ -44,21 +48,15 @@ export default function FileUpload({ onFileSelect, selectedFile }: FileUploadPro
     if (file) handleFile(file)
   }
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (file) handleFile(file)
-  }
-
   return (
     <div className="w-full">
       <div
-        className={`relative border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-colors ${
-          dragOver
-            ? 'border-indigo-400 bg-indigo-950/40'
-            : selectedFile
-            ? 'border-green-500 bg-green-950/20'
-            : 'border-gray-600 bg-gray-900 hover:border-indigo-500 hover:bg-gray-800'
-        }`}
+        className={`border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all ${dragOver
+          ? 'border-[--text] bg-[--bg-secondary]'
+          : selectedFile
+            ? 'border-[--border] bg-[--bg-secondary]'
+            : 'border-[--border-light] bg-[--bg-secondary] hover:border-[--border]'
+          }`}
         onClick={() => inputRef.current?.click()}
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}
@@ -68,32 +66,27 @@ export default function FileUpload({ onFileSelect, selectedFile }: FileUploadPro
           ref={inputRef}
           type="file"
           className="hidden"
-          accept=".mp4,.avi,.mov,.mkv,.mp3,.wav,.flac,.m4a,.ogg"
-          onChange={handleChange}
+          accept=".mp4,.avi,.mov,.mkv,.mp3,.wav,.flac,.m4a,.ogg,.jpg,.jpeg,.png,.webp,.bmp"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
         />
         {selectedFile ? (
-          <div className="flex flex-col items-center gap-2">
-            <span className="text-4xl">✅</span>
-            <p className="text-green-400 font-semibold text-lg">{selectedFile.name}</p>
-            <p className="text-gray-400 text-sm">{formatBytes(selectedFile.size)}</p>
-            <p className="text-gray-500 text-xs mt-1">Click or drag to replace</p>
+          <div className="flex flex-col items-center gap-1">
+            <p className="text-[--text] font-medium text-sm">{selectedFile.name}</p>
+            <p className="text-[--text-dim] text-xs">{formatBytes(selectedFile.size)} · Click or drag to replace</p>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-3">
-            <span className="text-5xl">{dragOver ? '📂' : '📁'}</span>
-            <p className="text-gray-200 font-medium text-lg">
-              {dragOver ? 'Drop your file here' : 'Drag & drop your file here'}
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-[--text] font-medium text-sm">
+              {dragOver ? 'Drop your file' : 'Drag & drop a file here'}
             </p>
-            <p className="text-gray-400 text-sm">or click to browse</p>
-            <p className="text-gray-500 text-xs mt-1">
-              Supported: MP4, AVI, MOV, MKV, MP3, WAV, FLAC, M4A, OGG
+            <p className="text-[--text-dim] text-xs">or click to browse</p>
+            <p className="text-[--text-dim] text-xs mt-2 opacity-60">
+              JPG · PNG · WEBP · BMP · MP4 · AVI · MOV · MKV · MP3 · WAV · FLAC
             </p>
           </div>
         )}
       </div>
-      {error && (
-        <p className="mt-2 text-red-400 text-sm">{error}</p>
-      )}
+      {error && <p className="mt-2 text-red-600 text-sm">{error}</p>}
     </div>
   )
 }

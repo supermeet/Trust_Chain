@@ -27,6 +27,27 @@ const defaultForm: ContextForm = {
   model_name: '',
 }
 
+function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <label className="flex items-center gap-3 cursor-pointer group py-1.5">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className={`relative inline-flex h-[22px] w-[40px] shrink-0 items-center rounded-full transition-colors ${checked ? 'bg-[--text]' : 'bg-[--border]'
+          }`}
+      >
+        <span
+          className={`inline-block h-[18px] w-[18px] rounded-full bg-white shadow-sm transition-transform ${checked ? 'translate-x-[20px]' : 'translate-x-[2px]'
+            }`}
+        />
+      </button>
+      <span className="text-sm text-[--text-secondary] group-hover:text-[--text] transition-colors">{label}</span>
+    </label>
+  )
+}
+
 export default function Upload() {
   const navigate = useNavigate()
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -82,54 +103,42 @@ export default function Upload() {
     }
   }
 
+  const inputClass = 'w-full bg-[--bg-secondary] border border-[--border-light] text-[--text] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[--text]/10 focus:border-[--border] transition-all placeholder:text-[--text-dim]'
+
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Submit Evidence</h1>
-        <p className="text-gray-400">
-          Upload a video or audio file for deepfake detection and blockchain-anchored integrity proof.
-        </p>
-      </div>
+    <div className="max-w-xl mx-auto py-16 animate-enter">
+      <h1 className="text-3xl font-semibold text-[--text] tracking-tight mb-2">Submit a file</h1>
+      <p className="text-base text-[--text-secondary] mb-10">
+        Upload audio or video for deepfake analysis and blockchain certification.
+      </p>
+
+      <hr className="border-[--border-light] mb-8" />
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* File Upload */}
         <FileUpload onFileSelect={setSelectedFile} selectedFile={selectedFile} />
 
-        {/* Context form — shown after file selected */}
         {selectedFile && (
           <>
-            {/* About the Content */}
-            <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-              <h2 className="text-base font-semibold text-gray-200 mb-4">About the Content</h2>
-              <div className="space-y-3">
-                {[
-                  { field: 'disclosure_stripped' as const, label: 'AI disclosure was stripped or hidden' },
-                  { field: 'content_distributed' as const, label: 'Content was widely distributed' },
-                  { field: 'victim_impersonated' as const, label: 'A real person is being impersonated' },
-                ].map(({ field, label }) => (
-                  <label key={field} className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={form[field] as boolean}
-                      onChange={(e) => setCheck(field, e.target.checked)}
-                      className="w-4 h-4 rounded accent-indigo-500"
-                    />
-                    <span className="text-gray-300 text-sm">{label}</span>
-                  </label>
-                ))}
+            <div className="pt-2 animate-enter animate-enter-d1">
+              <h2 className="text-sm font-semibold text-[--text] mb-4">About the content</h2>
+              <div className="space-y-1">
+                <Toggle checked={form.disclosure_stripped} onChange={(v) => setCheck('disclosure_stripped', v)} label="AI disclosure was stripped or hidden" />
+                <Toggle checked={form.content_distributed} onChange={(v) => setCheck('content_distributed', v)} label="Content was widely distributed" />
+                <Toggle checked={form.victim_impersonated} onChange={(v) => setCheck('victim_impersonated', v)} label="A real person is being impersonated" />
               </div>
             </div>
 
-            {/* About the Platform */}
-            <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-              <h2 className="text-base font-semibold text-gray-200 mb-4">About the Platform</h2>
+            <hr className="border-[--border-light]" />
+
+            <div className="animate-enter animate-enter-d2">
+              <h2 className="text-sm font-semibold text-[--text] mb-4">Platform details</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Platform</label>
+                  <label className="block text-xs text-[--text-dim] mb-1.5">Platform</label>
                   <select
                     value={form.platform_name}
                     onChange={(e) => setText('platform_name', e.target.value)}
-                    className="w-full bg-gray-800 border border-gray-700 text-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
+                    className={inputClass}
                   >
                     {['YouTube', 'Instagram', 'WhatsApp', 'X', 'Telegram', 'Other'].map((p) => (
                       <option key={p} value={p}>{p}</option>
@@ -137,92 +146,59 @@ export default function Upload() {
                   </select>
                 </div>
 
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={form.takedown_requested}
-                    onChange={(e) => setCheck('takedown_requested', e.target.checked)}
-                    className="w-4 h-4 rounded accent-indigo-500"
-                  />
-                  <span className="text-gray-300 text-sm">Takedown was requested</span>
-                </label>
+                <Toggle checked={form.takedown_requested} onChange={(v) => setCheck('takedown_requested', v)} label="Takedown was requested" />
 
                 {form.takedown_requested && (
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Platform response time (hours)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={form.response_hours}
-                      onChange={(e) => setText('response_hours', e.target.value)}
-                      placeholder="e.g. 48"
-                      className="w-full bg-gray-800 border border-gray-700 text-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
-                    />
+                    <label className="block text-xs text-[--text-dim] mb-1.5">Response time (hours)</label>
+                    <input type="number" min="0" value={form.response_hours} onChange={(e) => setText('response_hours', e.target.value)} placeholder="e.g. 48" className={inputClass} />
                   </div>
                 )}
 
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={form.content_removed}
-                    onChange={(e) => setCheck('content_removed', e.target.checked)}
-                    className="w-4 h-4 rounded accent-indigo-500"
-                  />
-                  <span className="text-gray-300 text-sm">Content was eventually removed</span>
-                </label>
+                <Toggle checked={form.content_removed} onChange={(v) => setCheck('content_removed', v)} label="Content was eventually removed" />
 
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Estimated reach (views)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={form.estimated_reach}
-                    onChange={(e) => setText('estimated_reach', e.target.value)}
-                    placeholder="e.g. 50000"
-                    className="w-full bg-gray-800 border border-gray-700 text-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
-                  />
+                  <label className="block text-xs text-[--text-dim] mb-1.5">Estimated reach (views)</label>
+                  <input type="number" min="0" value={form.estimated_reach} onChange={(e) => setText('estimated_reach', e.target.value)} placeholder="e.g. 50000" className={inputClass} />
                 </div>
               </div>
             </div>
 
-            {/* AI Model (Optional) */}
-            <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-              <h2 className="text-base font-semibold text-gray-200 mb-4">AI Model <span className="text-gray-500 font-normal">(Optional)</span></h2>
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Model name</label>
-                <input
-                  type="text"
-                  value={form.model_name}
-                  onChange={(e) => setText('model_name', e.target.value)}
-                  placeholder="e.g. Stable Diffusion, Midjourney, ElevenLabs…"
-                  className="w-full bg-gray-800 border border-gray-700 text-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
-                />
-              </div>
+            <hr className="border-[--border-light]" />
+
+            <div className="animate-enter animate-enter-d3">
+              <h2 className="text-sm font-semibold text-[--text] mb-1">AI model</h2>
+              <p className="text-xs text-[--text-dim] mb-4">Optional — if you know which model created the content.</p>
+              <input
+                type="text"
+                value={form.model_name}
+                onChange={(e) => setText('model_name', e.target.value)}
+                placeholder="e.g. Stable Diffusion, ElevenLabs, Midjourney…"
+                className={inputClass}
+              />
             </div>
 
-            {/* Error */}
             {error && (
-              <div className="bg-red-950 border border-red-700 rounded-lg px-4 py-3 text-red-300 text-sm">
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 text-sm">
                 {error}
               </div>
             )}
 
-            {/* Submit */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-6 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
+              className="w-full py-3.5 bg-[--text] hover:bg-[#333336] disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium rounded-full transition-colors text-sm flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                   </svg>
-                  Analyzing &amp; anchoring to blockchain…
+                  Analyzing…
                 </>
               ) : (
-                'Submit for Analysis'
+                'Submit for analysis'
               )}
             </button>
           </>

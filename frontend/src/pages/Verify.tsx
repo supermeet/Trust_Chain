@@ -2,7 +2,6 @@ import { useState } from 'react'
 import axios from 'axios'
 
 type TabType = 'id' | 'file'
-
 type VerifyStatus = 'verified' | 'mismatch' | 'not_found' | null
 
 interface VerifyResult {
@@ -16,19 +15,22 @@ function StatusBanner({ result }: { result: VerifyResult }) {
 
   const config = {
     verified: {
-      icon: '✅',
-      color: 'bg-green-950 border-green-700 text-green-300',
-      text: `Verified — unmodified since ${result.timestamp ? new Date(result.timestamp).toLocaleString() : 'recorded time'}`,
+      bg: 'bg-green-50',
+      border: 'border-green-200',
+      text: 'text-green-700',
+      label: `Verified — unmodified since ${result.timestamp ? new Date(result.timestamp).toLocaleString() : 'recorded time'}`,
     },
     mismatch: {
-      icon: '❌',
-      color: 'bg-red-950 border-red-700 text-red-300',
-      text: 'Hash mismatch — possible tampering detected',
+      bg: 'bg-red-50',
+      border: 'border-red-200',
+      text: 'text-red-700',
+      label: 'Hash mismatch — possible tampering detected',
     },
     not_found: {
-      icon: '⚠️',
-      color: 'bg-yellow-950 border-yellow-700 text-yellow-300',
-      text: 'No record found on blockchain',
+      bg: 'bg-yellow-50',
+      border: 'border-yellow-200',
+      text: 'text-yellow-800',
+      label: 'No record found on blockchain',
     },
   }
 
@@ -36,19 +38,23 @@ function StatusBanner({ result }: { result: VerifyResult }) {
   if (!c) return null
 
   return (
-    <div className={`border rounded-xl px-5 py-4 flex items-start gap-3 ${c.color}`}>
-      <span className="text-xl">{c.icon}</span>
-      <div>
-        <p className="font-semibold">{c.text}</p>
-        {result.message && <p className="text-sm mt-1 opacity-80">{result.message}</p>}
-      </div>
+    <div className={`rounded-2xl px-5 py-4 border ${c.border} ${c.bg} animate-enter`}>
+      <p className={`font-semibold text-sm ${c.text}`}>{c.label}</p>
+      {result.message && <p className="text-sm mt-1 text-[--text-dim]">{result.message}</p>}
     </div>
   )
 }
 
 function resolveStatus(data: Record<string, unknown>): VerifyResult {
+  if (data.id || data.file_hash) {
+    return {
+      status: 'verified',
+      timestamp: (data.timestamp ?? data.created_at) as string | undefined,
+    }
+  }
+
   const verified = data.verified ?? data.match ?? data.status === 'verified'
-  const found = data.found ?? data.exists ?? data.status !== 'not_found'
+  const found = data.found ?? data.exists ?? data.registered_on_chain ?? data.status !== 'not_found'
 
   if (!found || data.status === 'not_found') {
     return { status: 'not_found' }
@@ -65,13 +71,11 @@ function resolveStatus(data: Record<string, unknown>): VerifyResult {
 export default function Verify() {
   const [activeTab, setActiveTab] = useState<TabType>('id')
 
-  // By ID
   const [eventId, setEventId] = useState('')
   const [idLoading, setIdLoading] = useState(false)
   const [idResult, setIdResult] = useState<VerifyResult | null>(null)
   const [idError, setIdError] = useState<string | null>(null)
 
-  // By File
   const [fileInput, setFileInput] = useState<File | null>(null)
   const [fileLoading, setFileLoading] = useState(false)
   const [fileResult, setFileResult] = useState<VerifyResult | null>(null)
@@ -122,29 +126,24 @@ export default function Verify() {
   }
 
   const tabClass = (tab: TabType) =>
-    `px-5 py-2.5 text-sm font-medium rounded-t-lg transition-colors border-b-2 ${
-      activeTab === tab
-        ? 'border-indigo-500 text-indigo-400 bg-gray-900'
-        : 'border-transparent text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+    `px-4 py-2 text-sm font-medium transition-colors rounded-full ${activeTab === tab
+      ? 'bg-[--text] text-white'
+      : 'text-[--text-secondary] hover:text-[--text]'
     }`
 
+  const inputClass = 'w-full bg-[--bg-secondary] border border-[--border-light] text-[--text] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[--text]/10 focus:border-[--border] transition-all placeholder:text-[--text-dim]'
+
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Verification Portal</h1>
-        <p className="text-gray-400">
-          Verify the integrity of evidence against the blockchain record.
-        </p>
-      </div>
+    <div className="max-w-xl mx-auto py-16 animate-enter">
+      <h1 className="text-3xl font-semibold text-[--text] tracking-tight mb-2">Verify evidence</h1>
+      <p className="text-base text-[--text-secondary] mb-10">
+        Check if a file or event is registered on the blockchain.
+      </p>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-800 mb-6">
-        <button className={tabClass('id')} onClick={() => setActiveTab('id')}>
-          By Event ID
-        </button>
-        <button className={tabClass('file')} onClick={() => setActiveTab('file')}>
-          By File Upload
-        </button>
+      <div className="flex gap-2 mb-8 bg-[--bg-secondary] p-1 rounded-full w-fit">
+        <button className={tabClass('id')} onClick={() => setActiveTab('id')}>By Event ID</button>
+        <button className={tabClass('file')} onClick={() => setActiveTab('file')}>By File</button>
       </div>
 
       {/* By Event ID */}
@@ -156,74 +155,56 @@ export default function Verify() {
               value={eventId}
               onChange={(e) => setEventId(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && lookupById()}
-              placeholder="Enter Event ID…"
-              className="flex-1 bg-gray-900 border border-gray-700 text-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500"
+              placeholder="Paste event ID…"
+              className={`flex-1 ${inputClass}`}
             />
             <button
               onClick={lookupById}
               disabled={idLoading || !eventId.trim()}
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+              className="px-6 py-3 bg-[#1d1d1f] hover:bg-[#333336] disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium rounded-full transition-colors shrink-0"
             >
-              {idLoading ? (
-                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                </svg>
-              ) : (
-                'Lookup'
-              )}
+              {idLoading ? '…' : 'Lookup'}
             </button>
           </div>
-          {idError && <p className="text-red-400 text-sm">{idError}</p>}
+          {idError && <p className="text-red-600 text-sm">{idError}</p>}
           {idResult && <StatusBanner result={idResult} />}
         </div>
       )}
 
-      {/* By File Upload */}
+      {/* By File */}
       {activeTab === 'file' && (
         <div className="space-y-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 text-center">
+          <div className="border-2 border-dashed border-[--border-light] rounded-2xl p-10 text-center cursor-pointer hover:border-[--border] transition-colors"
+            onClick={() => document.getElementById('verify-file')?.click()}
+          >
             <input
               type="file"
               id="verify-file"
               className="hidden"
               onChange={(e) => setFileInput(e.target.files?.[0] ?? null)}
             />
-            <label htmlFor="verify-file" className="cursor-pointer block">
-              {fileInput ? (
-                <div className="space-y-1">
-                  <p className="text-green-400 font-medium">{fileInput.name}</p>
-                  <p className="text-gray-500 text-sm">Click to change file</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-4xl">📂</p>
-                  <p className="text-gray-300">Click to select a file</p>
-                  <p className="text-gray-500 text-sm">The file hash will be checked against the blockchain</p>
-                </div>
-              )}
-            </label>
+            {fileInput ? (
+              <div>
+                <p className="text-[--text] font-medium text-sm">{fileInput.name}</p>
+                <p className="text-[--text-dim] text-xs mt-1">Click to change</p>
+              </div>
+            ) : (
+              <div>
+                <p className="text-[--text] text-sm font-medium mb-1">Click to select a file</p>
+                <p className="text-[--text-dim] text-xs">The file hash will be checked against the blockchain</p>
+              </div>
+            )}
           </div>
 
           <button
             onClick={verifyFile}
             disabled={fileLoading || !fileInput}
-            className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+            className="w-full py-3.5 bg-[--text] hover:bg-[#333336] disabled:opacity-40 text-white text-sm font-medium rounded-full transition-colors"
           >
-            {fileLoading ? (
-              <>
-                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                </svg>
-                Verifying…
-              </>
-            ) : (
-              'Verify File'
-            )}
+            {fileLoading ? 'Verifying…' : 'Verify file'}
           </button>
 
-          {fileError && <p className="text-red-400 text-sm">{fileError}</p>}
+          {fileError && <p className="text-red-600 text-sm">{fileError}</p>}
           {fileResult && <StatusBanner result={fileResult} />}
         </div>
       )}

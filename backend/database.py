@@ -1,9 +1,10 @@
 import json
 import os
 import sqlite3
+import tempfile
 from datetime import datetime, timezone
 
-_DB_PATH = os.getenv("DB_PATH", "/tmp/trustchain.db")
+_DB_PATH = os.getenv("DB_PATH", os.path.join(tempfile.gettempdir(), "trustchain.db"))
 
 
 def init_db() -> None:
@@ -73,3 +74,23 @@ def get_evidence(evidence_id: str) -> dict | None:
             except (json.JSONDecodeError, TypeError):
                 pass
     return record
+
+
+def get_all_evidence() -> list[dict]:
+    """Return all evidence records, newest first."""
+    with sqlite3.connect(_DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT * FROM evidence ORDER BY created_at DESC"
+        ).fetchall()
+    results = []
+    for row in rows:
+        record = dict(row)
+        for field in ("detection_result", "liability_scores"):
+            if record.get(field):
+                try:
+                    record[field] = json.loads(record[field])
+                except (json.JSONDecodeError, TypeError):
+                    pass
+        results.append(record)
+    return results

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TrustChain — System Architecture</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0a1a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header {
+            width: 100%;
+            padding: 32px 40px 20px;
+            text-align: center;
+            background: linear-gradient(180deg, #111128 0%, #0a0a1a 100%);
+            border-bottom: 1px solid #1e1b4b;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .header h1 span {
+            color: #818cf8;
+        }
+
+        .header p {
+            margin-top: 6px;
+            font-size: 14px;
+            color: #94a3b8;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin: 16px 0 4px;
+        }
+
+        .toolbar button {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 10px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.2s;
+        }
+
+        .toolbar button:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1, #818cf8);
+            color: #fff;
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.35);
+        }
+
+        .btn-secondary {
+            background: #1e293b;
+            color: #cbd5e1;
+            border: 1px solid #334155 !important;
+        }
+
+        .card {
+            background: #0f1029;
+            border: 1px solid #1e1b4b;
+            border-radius: 16px;
+            padding: 40px 32px;
+            margin: 24px 20px 40px;
+            max-width: 960px;
+            width: 95%;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        #diagram-container {
+            display: flex;
+            justify-content: center;
+            overflow-x: auto;
+        }
+
+        #diagram-container svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .tech-table {
+            margin-top: 32px;
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .tech-table th {
+            text-align: left;
+            padding: 10px 16px;
+            background: #16163a;
+            color: #a5b4fc;
+            font-weight: 600;
+            border-bottom: 2px solid #312e81;
+        }
+
+        .tech-table td {
+            padding: 10px 16px;
+            border-bottom: 1px solid #1e1b4b;
+            color: #cbd5e1;
+        }
+
+        .tech-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .tech-table .layer {
+            color: #818cf8;
+            font-weight: 600;
+        }
+
+        .footer {
+            padding: 20px;
+            font-size: 12px;
+            color: #475569;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>🔗 Trust<span>Chain</span> — System Architecture</h1>
+        <p>Deepfake Detection · Blockchain Evidence Locking · Court-Ready Certificates</p>
+        <div class="toolbar">
+            <button class="btn-primary" onclick="downloadPNG()">⬇ Download PNG</button>
+            <button class="btn-secondary" onclick="downloadSVG()">⬇ Download SVG</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div id="diagram-container">
+            <pre class="mermaid">
+graph TD
+  USER(("👤  User"))
+
+  subgraph FE["⚛️  Frontend  ·  React 18 + Vite + Tailwind"]
+    direction LR
+    UPLOAD["📤  Upload Page"]
+    RESULTS["📊  Results Dashboard"]
+    VERIFY["🔍  Verify Page"]
+  end
+
+  subgraph BE["⚡  FastAPI  Backend  :8000"]
+    API["🔀  REST API  Gateway\n/api/upload · /api/verify · /api/evidence · /api/report"]
+
+    subgraph PIPE["🔧  Core Processing Pipeline"]
+      direction LR
+      HASH["🔐  SHA-256\nHash Engine"]
+      DETECT["🤖  Deepfake\nDetection\nWav2Vec2\nEfficientNet"]
+      SCORE["⚖️  Liability\nScorer\nUser · Platform\nArchitect"]
+      CERT["📄  PDF\nCertificate\nReportLab\n§65B"]
+    end
+
+    CHAIN["⛓️  Blockchain Registry\nweb3.py · Infura"]
+    DB[("🗄️  SQLite  Database\nEvidence Records")]
+  end
+
+  subgraph ETH["☁️  Ethereum  Sepolia  Testnet"]
+    CONTRACT["📜  EvidenceRegistry.sol\nregister( )  ·  verify( )"]
+  end
+
+  USER -- "Upload / Verify Files" --> FE
+  FE -- "HTTP  REST  Calls" --> API
+  API --> HASH
+  HASH --> DETECT
+  DETECT --> SCORE
+  SCORE --> CERT
+  CERT --> DB
+  API --> CHAIN
+  CHAIN <-- "On-chain  Tx" --> CONTRACT
+  API -- "JSON  Response" --> FE
+      </pre>
+        </div>
+
+        <table class="tech-table">
+            <thead>
+                <tr>
+                    <th>Layer</th>
+                    <th>Technology</th>
+                    <th>Role</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="layer">Frontend</td>
+                    <td>React 18, Vite, Tailwind CSS</td>
+                    <td>Upload · Results · Verify pages</td>
+                </tr>
+                <tr>
+                    <td class="layer">Backend</td>
+                    <td>FastAPI, Uvicorn, Python 3.11</td>
+                    <td>REST API — 5 endpoints, pipeline orchestrator</td>
+                </tr>
+                <tr>
+                    <td class="layer">Detection</td>
+                    <td>Wav2Vec2 (audio), EfficientNet (video)</td>
+                    <td>Deepfake confidence scoring (mock available)</td>
+                </tr>
+                <tr>
+                    <td class="layer">Blockchain</td>
+                    <td>Solidity 0.8, Sepolia, web3.py, Infura</td>
+                    <td>Immutable evidence hash registration</td>
+                </tr>
+                <tr>
+                    <td class="layer">Liability</td>
+                    <td>Weighted model + model_registry.json</td>
+                    <td>Three-party legal liability assessment</td>
+                </tr>
+                <tr>
+                    <td class="layer">PDF</td>
+                    <td>ReportLab</td>
+                    <td>Court-ready §65B certificate generation</td>
+                </tr>
+                <tr>
+                    <td class="layer">Storage</td>
+                    <td>SQLite</td>
+                    <td>Evidence records & certificate paths</td>
+                </tr>
+                <tr>
+                    <td class="layer">Infra</td>
+                    <td>Docker Compose, Nginx Alpine</td>
+                    <td>Two-container deployment with named volumes</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="footer">TrustChain System Architecture · Feb 2026</div>
+
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#1e1b4b',
+                primaryTextColor: '#e0e7ff',
+                primaryBorderColor: '#818cf8',
+                lineColor: '#6366f1',
+                secondaryColor: '#16213e',
+                tertiaryColor: '#0f172a',
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '14px',
+            },
+            flowchart: {
+                htmlLabels: true,
+                curve: 'basis',
+                rankSpacing: 50,
+                nodeSpacing: 40,
+                padding: 20,
+            },
+        });
+    </script>
+
+    <script>
+        function getSVG() { return document.querySelector('#diagram-container svg'); }
+
+        function downloadSVG() {
+            const svg = getSVG();
+            if (!svg) { alert('Diagram still loading…'); return; }
+            const c = svg.cloneNode(true);
+            c.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+            const s = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+            s.textContent = "@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');*{font-family:'Inter',sans-serif}";
+            c.prepend(s);
+            dl(new Blob([new XMLSerializer().serializeToString(c)], { type: 'image/svg+xml' }), 'TrustChain_Architecture.svg');
+        }
+
+        function downloadPNG() {
+            const svg = getSVG();
+            if (!svg) { alert('Diagram still loading…'); return; }
+            const sc = 3, b = svg.getBoundingClientRect();
+            const cv = document.createElement('canvas');
+            cv.width = b.width * sc; cv.height = b.height * sc;
+            const ctx = cv.getContext('2d');
+            ctx.scale(sc, sc);
+            ctx.fillStyle = '#0f1029';
+            ctx.fillRect(0, 0, b.width, b.height);
+            const c = svg.cloneNode(true);
+            c.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+            const d = new XMLSerializer().serializeToString(c);
+            const img = new Image();
+            img.onload = () => { ctx.drawImage(img, 0, 0, b.width, b.height); cv.toBlob(blob => dl(blob, 'TrustChain_Architecture.png'), 'image/png'); };
+            img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(d)));
+        }
+
+        function dl(blob, name) {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob); a.download = name;
+            document.body.appendChild(a); a.click();
+            setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 100);
+        }
+    </script>
+</body>
+
+</html>

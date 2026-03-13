@@ -7,3 +7,5 @@ Pillow==12.1.1
 web3==6.11.3
 python-dotenv==1.0.0
 requests==2.31.0
+huggingface_hub>=0.20.0
+google-generativeai>=0.8.0

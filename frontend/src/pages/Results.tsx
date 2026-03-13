@@ -1,9 +1,91 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import axios from 'axios'
 import LiabilityCard from '../components/LiabilityCard'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+function ConfidenceRing({ value, isSynthetic }: { value: number; isSynthetic: boolean }) {
+  const pct = Math.round(value * 100)
+  const radius = 50
+  const circumference = 2 * Math.PI * radius
+  const dashoffset = circumference - (value * circumference)
+  const color = isSynthetic ? '#e5484d' : '#34c759'
+
+  return (
+    <div className="confidence-ring">
+      <svg width="120" height="120" viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r={radius} fill="none" stroke="#e8e8ed" strokeWidth="8" />
+        <circle
+          cx="60" cy="60" r={radius} fill="none"
+          stroke={color} strokeWidth="8"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={dashoffset}
+          style={{ transition: 'stroke-dashoffset 1s ease-out' }}
+        />
+      </svg>
+      <div className="value" style={{ color }}>{pct}%</div>
+    </div>
+  )
+}
+
+function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center gap-1 py-3">
+      <span className="text-xs text-[--text-dim] sm:w-28 shrink-0">{label}</span>
+      <div className="text-sm text-[--text]">{children}</div>
+    </div>
+  )
+}
+
+function ModelCard({ model }: { model: any }) {
+  const pct = Math.round(model.confidence * 100)
+  const barColor = model.is_flagged ? '#e5484d' : '#34c759'
+
+  return (
+    <div className="bg-[--bg-secondary] rounded-2xl p-5 border border-[--border-light]">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-sm font-semibold text-[--text]">{model.name}</h4>
+        <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full border ${model.is_flagged
+          ? 'bg-red-50 border-red-200 text-red-700'
+          : 'bg-green-50 border-green-200 text-green-700'
+          }`}>
+          {model.is_flagged ? 'FLAGGED' : 'PASS'}
+        </span>
+      </div>
+
+      {/* Progress bar */}
+      <div className="w-full h-2 bg-[--border-light] rounded-full mb-2 overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-1000"
+          style={{ width: `${pct}%`, background: barColor }}
+        />
+      </div>
+
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-[--text-dim]">Confidence: {pct}%</span>
+        <span className="text-[10px] text-[--text-dim]">Weight: {(model.weight * 100).toFixed(0)}%</span>
+      </div>
+
+      <p className="text-[10px] text-[--text-dim] mt-2">XAI: {model.xai_method}</p>
+    </div>
+  )
+}
+
+function TierBadge({ tier }: { tier: any }) {
+  const levelConfig: Record<string, { bg: string; text: string }> = {
+    TIER_1: { bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-700' },
+    TIER_2: { bg: 'bg-blue-50 border-blue-200', text: 'text-blue-700' },
+    TIER_3: { bg: 'bg-amber-50 border-amber-200', text: 'text-amber-700' },
+  }
+  const cfg = levelConfig[tier?.level] || levelConfig.TIER_3
+  return (
+    <span className={`text-xs font-semibold px-3 py-1 rounded-full border ${cfg.bg} ${cfg.text}`}>
+      {tier?.label || 'Unknown Tier'}
+    </span>
+  )
+}
 
 export default function Results() {
   const { id } = useParams<{ id: string }>()
@@ -11,6 +93,7 @@ export default function Results() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [manifestOpen, setManifestOpen] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -35,13 +118,13 @@ export default function Results() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="flex items-center gap-3 text-gray-400">
-          <svg className="animate-spin h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <div className="flex items-center justify-center py-24">
+        <div className="flex items-center gap-3 text-[--text-dim] text-sm">
+          <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
-          Loading results…
+          Loading…
         </div>
       </div>
     )
@@ -49,8 +132,8 @@ export default function Results() {
 
   if (error || !data) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-red-950 border border-red-700 rounded-xl px-6 py-5 text-red-300">
+      <div className="max-w-xl mx-auto py-16">
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-6 py-5 text-red-700">
           <p className="font-semibold mb-1">Error</p>
           <p className="text-sm">{error ?? 'Result not found.'}</p>
         </div>
@@ -58,114 +141,300 @@ export default function Results() {
     )
   }
 
-  // Safely extract detection data (handles both old and new backend shapes)
   const detection = data.detection || data.detection_result || {}
   const confidence = detection.confidence ?? data.detection_confidence ?? 0
   const explanation = detection.explanation ?? ''
   const isSynthetic = confidence >= 0.5
-  const confidencePct = (confidence * 100).toFixed(1)
   const label = detection.label || (isSynthetic ? 'SYNTHETIC' : 'AUTHENTIC')
-
-  // Safely extract blockchain data
   const blockchain = data.blockchain || {}
   const txId = blockchain.tx_id || data.blockchain_tx_id || ''
   const blockchainTimestamp = blockchain.timestamp || data.timestamp || ''
-
-  // Safely extract liability scores
   const liabilityScores = data.liability_scores || data.liability || null
-
-  // Event ID
   const eventId = data.id || id
 
-  return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-white mb-1">Analysis Results</h1>
-        <p className="text-gray-500 text-sm font-mono">Event ID: {eventId}</p>
-      </div>
+  // New VERITAS data
+  const modelBreakdown = detection.model_breakdown || []
+  const agreement = detection.agreement || ''
+  const c2paManifest = data.c2pa_manifest || null
+  const smsBeacon = data.sms_beacon || null
+  const custodyChain = data.custody_chain || []
 
-      {/* Detection result */}
-      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-gray-200">Detection Result</h2>
-          <span
-            className={`px-3 py-1 rounded-full text-sm font-bold ${
-              isSynthetic
-                ? 'bg-red-900 text-red-300 border border-red-700'
-                : 'bg-green-900 text-green-300 border border-green-700'
-            }`}
-          >
-            {isSynthetic ? '⚠' : '✓'} {label}
+  return (
+    <div className="max-w-3xl mx-auto py-16 px-4 animate-enter">
+      <h1 className="text-3xl font-semibold text-[--text] tracking-tight mb-1">Results</h1>
+      <p className="text-xs text-[--text-dim] font-mono mb-12 break-all">{eventId}</p>
+
+      {/* ── Detection ── */}
+      <div className="mb-14 animate-enter animate-enter-d1">
+        <div className="flex items-start justify-between mb-6">
+          <h2 className="text-sm font-semibold text-[--text]">Detection</h2>
+          <span className={`text-xs font-semibold px-3 py-1 rounded-full ${isSynthetic
+            ? 'bg-red-50 text-red-600 border border-red-200'
+            : 'bg-green-50 text-green-700 border border-green-200'
+            }`}>
+            {label}
           </span>
         </div>
 
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-sm text-gray-400">Synthetic confidence</span>
-            <span className={`text-lg font-bold ${isSynthetic ? 'text-red-400' : 'text-green-400'}`}>  
-              {confidencePct}%
-            </span>
-          </div>
-          <div className="w-full bg-gray-800 rounded-full h-2.5">
-            <div
-              className={`h-2.5 rounded-full transition-all ${isSynthetic ? 'bg-red-500' : 'bg-green-500'}`}
-              style={{ width: `${confidencePct}%` }}
-            />
+        <div className="flex items-center gap-10 mb-6">
+          <ConfidenceRing value={confidence} isSynthetic={isSynthetic} />
+          <div>
+            <div className="text-xs text-[--text-dim] mb-1">Ensemble Confidence</div>
+            <div className={`text-4xl font-semibold tracking-tight ${isSynthetic ? 'text-red-600' : 'text-green-700'}`}>
+              {(confidence * 100).toFixed(1)}%
+            </div>
+            <div className="text-xs text-[--text-dim] mt-1">
+              {agreement && `Agreement: ${agreement} models`}
+              {!agreement && (isSynthetic ? 'Likely synthetic or manipulated' : 'Appears authentic')}
+            </div>
           </div>
         </div>
 
-        <p className="text-gray-300 text-sm leading-relaxed">{explanation}</p>
+        {explanation && (
+          <div className="bg-[--bg-secondary] rounded-2xl p-5">
+            <p className="text-sm text-[--text-secondary] leading-relaxed">{explanation}</p>
+          </div>
+        )}
       </div>
 
-      {/* Liability */}
-      {liabilityScores && liabilityScores.user && (
-        <LiabilityCard scores={liabilityScores} />
+      <hr className="border-[--border-light] mb-14" />
+
+      {/* ── Multi-Modal AI Breakdown ── */}
+      {modelBreakdown.length > 0 && (
+        <div className="mb-14 animate-enter animate-enter-d1">
+          <h2 className="text-sm font-semibold text-[--text] mb-2">Multi-Modal AI Analysis</h2>
+          <p className="text-xs text-[--text-dim] mb-6">
+            {modelBreakdown.length} independent models · {detection.ensemble_method || 'Weighted Vote'} ensemble
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {modelBreakdown.map((model: any, i: number) => (
+              <ModelCard key={i} model={model} />
+            ))}
+          </div>
+        </div>
       )}
 
-      {/* Blockchain proof */}
-      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-        <h2 className="text-base font-semibold text-gray-200 mb-4">🔗 Blockchain Proof</h2>
-        <div className="space-y-2 text-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1">
-            <span className="text-gray-400 sm:w-28 shrink-0">Transaction</span>
+      {modelBreakdown.length > 0 && <hr className="border-[--border-light] mb-14" />}
+
+      {/* ── C2PA Manifest ── */}
+      {c2paManifest && (
+        <div className="mb-14 animate-enter animate-enter-d2">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-[--text]">Content Provenance (C2PA)</h2>
+            <TierBadge tier={c2paManifest.trust_tier} />
+          </div>
+
+          <div className="bg-[--bg-secondary] rounded-2xl p-5 border border-[--border-light]">
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <p className="text-[10px] text-[--text-dim] mb-1">Manifest ID</p>
+                <p className="text-xs font-mono text-[--text] break-all">{c2paManifest.manifest_id}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-[--text-dim] mb-1">C2PA Version</p>
+                <p className="text-xs text-[--text]">{c2paManifest.c2pa_version}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-[--text-dim] mb-1">Station</p>
+                <p className="text-xs text-[--text]">{c2paManifest.assertions?.['le.station_context']?.station_id || '—'}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-[--text-dim] mb-1">Device</p>
+                <p className="text-xs text-[--text]">{c2paManifest.assertions?.['le.device_attestation']?.platform || '—'}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-[--text-dim] mb-1">AI Triage</p>
+                <p className={`text-xs font-semibold ${c2paManifest.assertions?.['le.ai_triage']?.result === 'PASS' ? 'text-green-700' : 'text-red-600'}`}>
+                  {c2paManifest.assertions?.['le.ai_triage']?.result || '—'}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] text-[--text-dim] mb-1">Trust Weight</p>
+                <p className="text-xs text-[--text]">{c2paManifest.trust_tier?.weight || '—'}</p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setManifestOpen(!manifestOpen)}
+              className="text-xs text-[--link] hover:text-[--link-hover] font-medium transition-colors"
+            >
+              {manifestOpen ? 'Hide raw manifest ▴' : 'View raw manifest ▾'}
+            </button>
+
+            {manifestOpen && (
+              <pre className="mt-3 text-[10px] text-[--text-secondary] bg-white rounded-xl p-4 overflow-x-auto border border-[--border-light] max-h-[300px] overflow-y-auto">
+                {JSON.stringify(c2paManifest, null, 2)}
+              </pre>
+            )}
+          </div>
+        </div>
+      )}
+
+      {c2paManifest && <hr className="border-[--border-light] mb-14" />}
+
+      {/* ── SMS Beacon ── */}
+      {smsBeacon && (
+        <div className="mb-14 animate-enter animate-enter-d2">
+          <h2 className="text-sm font-semibold text-[--text] mb-4">SMS Beacon Anchor</h2>
+
+          <div className="bg-[--bg-secondary] rounded-2xl p-5 border border-[--border-light]">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-[10px] text-[--text-dim] mb-1">Beacon Reference</p>
+                <p className="text-base font-semibold font-mono text-[--text]">{smsBeacon.beacon_ref}</p>
+              </div>
+              <span className={`text-[10px] font-semibold px-3 py-1 rounded-full border ${smsBeacon.status === 'ANCHORED'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                : 'bg-red-50 border-red-200 text-red-700'
+                }`}>
+                {smsBeacon.status}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <p className="text-[10px] text-[--text-dim] mb-1">Hash Prefix (SMS)</p>
+                <p className="text-xs font-mono text-[--text]">{smsBeacon.hash_prefix}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-[--text-dim] mb-1">Station Code</p>
+                <p className="text-xs text-[--text]">{smsBeacon.station_code}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-[--text-dim] mb-1">Network Delay</p>
+                <p className="text-xs text-[--text]">{smsBeacon.network_delay_ms}ms</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-[--text-dim] mb-1">SMS Cost</p>
+                <p className="text-xs text-[--text]">₹{smsBeacon.sms_cost_inr}</p>
+              </div>
+            </div>
+
+            {/* Cross-validation */}
+            <div className="bg-white rounded-xl p-4 border border-[--border-light]">
+              <p className="text-[10px] text-[--text-dim] font-semibold mb-3 uppercase tracking-wider">Cross-Validation</p>
+              <div className="space-y-2">
+                {[
+                  { label: 'Hash prefix matches full hash', ok: smsBeacon.cross_validation?.hash_prefix_match },
+                  { label: 'Timestamp within tolerance', ok: smsBeacon.cross_validation?.timestamp_within_tolerance },
+                  { label: 'Station key signature valid', ok: smsBeacon.cross_validation?.station_key_valid },
+                ].map((check, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className={`text-xs ${check.ok ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {check.ok ? '✓' : '✗'}
+                    </span>
+                    <span className="text-xs text-[--text-secondary]">{check.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <p className="text-[10px] text-[--text-dim] mt-3 font-mono">
+              SMS: {smsBeacon.sms_content}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {smsBeacon && <hr className="border-[--border-light] mb-14" />}
+
+      {/* ── Liability ── */}
+      {liabilityScores && liabilityScores.user && (
+        <div className="mb-14 animate-enter animate-enter-d2">
+          <LiabilityCard scores={liabilityScores} />
+        </div>
+      )}
+
+      {/* ── Blockchain ── */}
+      {liabilityScores && liabilityScores.user && <hr className="border-[--border-light] mb-14" />}
+      <div className="mb-14 animate-enter animate-enter-d3">
+        <h2 className="text-sm font-semibold text-[--text] mb-4">Blockchain proof</h2>
+        <div className="divide-y divide-[--border-light]">
+          <InfoRow label="Transaction">
             {txId ? (
               <a
                 href={`https://sepolia.etherscan.io/tx/${txId}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-indigo-400 hover:text-indigo-300 font-mono text-xs break-all underline underline-offset-2"
+                className="text-[--link] hover:text-[--link-hover] font-mono text-xs break-all"
               >
                 {txId}
               </a>
             ) : (
-              <span className="text-gray-500 text-xs">Not available</span>
+              <span className="text-[--text-dim] text-xs">Not available</span>
             )}
-          </div>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1">
-            <span className="text-gray-400 sm:w-28 shrink-0">Timestamp</span>
-            <span className="text-gray-200">
-              {blockchainTimestamp ? new Date(blockchainTimestamp).toLocaleString() : 'N/A'}
-            </span>
-          </div>
+          </InfoRow>
+          <InfoRow label="Timestamp">
+            {blockchainTimestamp ? new Date(blockchainTimestamp).toLocaleString() : 'N/A'}
+          </InfoRow>
+          <InfoRow label="File hash">
+            <span className="font-mono text-xs break-all">{data.file_hash || '—'}</span>
+          </InfoRow>
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex flex-wrap gap-3">
+      <hr className="border-[--border-light] mb-14" />
+
+      {/* ── Chain of Custody Preview ── */}
+      {custodyChain.length > 0 && (
+        <div className="mb-14 animate-enter animate-enter-d3">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-[--text]">Chain of Custody</h2>
+            <Link
+              to={`/custody/${eventId}`}
+              className="text-xs text-[--link] hover:text-[--link-hover] font-medium transition-colors"
+            >
+              View full chain →
+            </Link>
+          </div>
+
+          <div className="flex items-center gap-2 overflow-x-auto pb-2">
+            {custodyChain.map((evt: any, i: number) => (
+              <div key={i} className="flex items-center gap-2 shrink-0">
+                <div className="bg-[--bg-secondary] rounded-xl px-3 py-2 border border-[--border-light]">
+                  <p className="text-[10px] font-semibold text-[--text]">{evt.custodian_role}</p>
+                  <p className="text-[10px] text-[--text-dim]">{evt.custodian_name}</p>
+                </div>
+                {i < custodyChain.length - 1 && (
+                  <span className="text-[--text-dim]">→</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {custodyChain.length > 0 && <hr className="border-[--border-light] mb-6" />}
+
+      {/* ── Actions ── */}
+      <div className="flex flex-wrap gap-3 animate-enter animate-enter-d4">
         <a
           href={`/api/report/${eventId}/pdf`}
           target="_blank"
           rel="noopener noreferrer"
-          className="px-5 py-2.5 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+          className="px-5 py-2.5 bg-[--text] hover:bg-[#333336] text-white text-sm font-medium rounded-full transition-colors"
         >
-          📄 Download PDF Report
+          Download PDF
         </a>
+        <Link
+          to={`/custody/${eventId}`}
+          className="px-5 py-2.5 border border-[--border] text-[--text] text-sm font-medium rounded-full transition-colors hover:bg-[--bg-secondary]"
+        >
+          Custody log
+        </Link>
         <button
           onClick={copyVerifyLink}
-          className="px-5 py-2.5 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+          className="px-5 py-2.5 border border-[--border] text-[--text] text-sm font-medium rounded-full transition-colors hover:bg-[--bg-secondary]"
         >
-          {copied ? '✅ Copied!' : '🔗 Copy Verification Link'}
+          {copied ? '✓ Copied' : 'Copy verify link'}
         </button>
+        <Link
+          to="/upload"
+          className="px-5 py-2.5 text-[--link] hover:text-[--link-hover] text-sm font-medium transition-colors"
+        >
+          ← New analysis
+        </Link>
       </div>
     </div>
   )

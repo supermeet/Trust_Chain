@@ -2,24 +2,37 @@ import os
 import uuid
 import json
 import shutil
+import tempfile
 from datetime import datetime, timezone
+from typing import Optional
 
-from fastapi import FastAPI, File, Form, UploadFile, HTTPException
+from dotenv import load_dotenv
+load_dotenv()  # Load .env BEFORE importing modules that read os.getenv()
+
+from fastapi import FastAPI, File, Form, UploadFile, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from hash_engine import hash_file
 from detection.audio_detector import detect_audio
 from detection.video_detector import detect_video
+from detection.image_detector import detect_image
+from detection.gemini_detector import detect_with_gemini
 from blockchain.contract import register_evidence, verify_evidence
 from liability.scorer import compute_liability
 from legal.pdf_generator import generate_pdf
-from database import init_db, save_evidence, get_evidence
+from database import init_db, save_evidence, get_evidence, get_all_evidence
+from custody.custody_manager import (
+    init_custody_table, add_custody_event, get_custody_chain,
+    auto_register_initial_custody, VALID_ROLES,
+)
+from provenance.manifest import generate_manifest
+from beacon.sms_beacon import generate_beacon
 
-_UPLOAD_DIR = "/tmp/trustchain_uploads"
+_UPLOAD_DIR = os.path.join(tempfile.gettempdir(), "trustchain_uploads")
 os.makedirs(_UPLOAD_DIR, exist_ok=True)
 
-app = FastAPI(title="TrustChain API", version="1.0.0")
+app = FastAPI(title="TrustChain API", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -30,9 +43,11 @@ app.add_middleware(
 )
 
 init_db()
+init_custody_table()
 
 _VIDEO_EXTS = {".mp4", ".avi", ".mov", ".mkv"}
 _AUDIO_EXTS = {".mp3", ".wav", ".flac", ".m4a", ".ogg"}
+_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 
 
 def _ext(filename: str) -> str:
@@ -56,11 +71,27 @@ def _reshape_record(record: dict) -> dict:
             liability_scores = {}
 
     is_synthetic = detection_result.get("is_synthetic", False)
+    evidence_id = record.get("id", "")
+    file_hash = record.get("file_hash", "")
+
+    # Generate C2PA manifest
+    c2pa_manifest = generate_manifest(
+        evidence_id=evidence_id,
+        file_hash=file_hash,
+        detection_type=record.get("detection_type", ""),
+        detection_result=detection_result,
+    )
+
+    # Generate SMS beacon
+    sms_beacon = generate_beacon(evidence_id, file_hash)
+
+    # Get custody chain
+    custody = get_custody_chain(evidence_id)
 
     return {
-        "id": record.get("id", ""),
+        "id": evidence_id,
         "filename": record.get("filename", ""),
-        "file_hash": record.get("file_hash", ""),
+        "file_hash": file_hash,
         "detection_type": record.get("detection_type", ""),
         "detection": {
             "confidence": detection_result.get("confidence", 0.0),
@@ -69,13 +100,19 @@ def _reshape_record(record: dict) -> dict:
             "explanation": detection_result.get("explanation", ""),
             "flagged_frames": detection_result.get("flagged_frames", []),
             "features": detection_result.get("features", {}),
+            "model_breakdown": detection_result.get("model_breakdown", []),
+            "agreement": detection_result.get("agreement", ""),
+            "ensemble_method": detection_result.get("ensemble_method", ""),
         },
         "liability_scores": liability_scores,
         "blockchain": {
             "tx_id": record.get("blockchain_tx_id", ""),
             "timestamp": record.get("timestamp", ""),
         },
-        "pdf_download_url": f"/api/report/{record.get('id', '')}/pdf",
+        "c2pa_manifest": c2pa_manifest,
+        "sms_beacon": sms_beacon,
+        "custody_chain": custody,
+        "pdf_download_url": f"/api/report/{evidence_id}/pdf",
         "timestamp": record.get("timestamp", ""),
     }
 
@@ -111,12 +148,17 @@ async def upload_evidence(
 
         if ext in _VIDEO_EXTS:
             detection_type = "video"
-            detection_result = detect_video(tmp_path)
         elif ext in _AUDIO_EXTS:
             detection_type = "audio"
-            detection_result = detect_audio(tmp_path)
+        elif ext in _IMAGE_EXTS:
+            detection_type = "image"
         else:
             detection_type = "unknown"
+
+        # Use Gemini-powered 4-model detection for all supported types
+        if detection_type != "unknown":
+            detection_result = detect_with_gemini(tmp_path, detection_type)
+        else:
             detection_result = {
                 "confidence": 0.0,
                 "is_synthetic": False,
@@ -169,6 +211,23 @@ async def upload_evidence(
         }
         save_evidence(db_record)
 
+        # Auto-register initial custody
+        auto_register_initial_custody(event_id)
+
+        # Generate C2PA manifest
+        c2pa_manifest = generate_manifest(
+            evidence_id=event_id,
+            file_hash=file_hash,
+            detection_type=detection_type,
+            detection_result=detection_result,
+        )
+
+        # Generate SMS beacon
+        sms_beacon = generate_beacon(event_id, file_hash)
+
+        # Get custody chain
+        custody = get_custody_chain(event_id)
+
         return {
             "event_id": event_id,
             "id": event_id,
@@ -181,12 +240,18 @@ async def upload_evidence(
                 "explanation": detection_result.get("explanation", ""),
                 "flagged_frames": detection_result.get("flagged_frames", []),
                 "features": detection_result.get("features", {}),
+                "model_breakdown": detection_result.get("model_breakdown", []),
+                "agreement": detection_result.get("agreement", ""),
+                "ensemble_method": detection_result.get("ensemble_method", ""),
             },
             "liability_scores": liability_scores,
             "blockchain": {
                 "tx_id": blockchain_tx_id,
                 "timestamp": timestamp,
             },
+            "c2pa_manifest": c2pa_manifest,
+            "sms_beacon": sms_beacon,
+            "custody_chain": custody,
             "pdf_download_url": f"/api/report/{event_id}/pdf",
             "timestamp": timestamp,
         }
@@ -201,6 +266,13 @@ def get_evidence_record(id: str):
     if record is None:
         raise HTTPException(status_code=404, detail="Evidence not found")
     return _reshape_record(record)
+
+
+@app.get("/api/evidence")
+def list_all_evidence():
+    """Return all evidence records for the dashboard."""
+    records = get_all_evidence()
+    return [_reshape_record(r) for r in records]
 
 
 @app.post("/api/verify")
@@ -222,6 +294,48 @@ async def verify_file(file: UploadFile = File(...)):
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
 
+
+# ── Chain of Custody Endpoints ──
+
+@app.get("/api/custody/{evidence_id}")
+def get_custody(evidence_id: str):
+    """Get the full chain of custody for an evidence item."""
+    chain = get_custody_chain(evidence_id)
+    return {"evidence_id": evidence_id, "chain": chain, "total_custodians": len(chain)}
+
+
+@app.post("/api/custody/{evidence_id}/transfer")
+def transfer_custody(
+    evidence_id: str,
+    custodian_name: str = Form(...),
+    custodian_role: str = Form(...),
+    custodian_badge: str = Form(""),
+    notes: str = Form(""),
+):
+    """Log a custody transfer event."""
+    # Verify evidence exists
+    record = get_evidence(evidence_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Evidence not found")
+
+    if custodian_role not in VALID_ROLES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid role. Valid roles: {VALID_ROLES}",
+        )
+
+    event = add_custody_event(
+        evidence_id=evidence_id,
+        custodian_name=custodian_name,
+        custodian_role=custodian_role,
+        custodian_badge=custodian_badge,
+        action="transfer",
+        notes=notes,
+    )
+    return event
+
+
+# ── Report PDF ──
 
 @app.get("/api/report/{id}/pdf")
 def download_pdf(id: str):

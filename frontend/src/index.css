@@ -1,7 +1,136 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --bg: #ffffff;
+  --bg-secondary: #f5f5f7;
+  --border: #d2d2d7;
+  --border-light: #e8e8ed;
+  --text: #1d1d1f;
+  --text-secondary: #6e6e73;
+  --text-dim: #86868b;
+  --link: #0066cc;
+  --link-hover: #0077ed;
+}
+
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  @apply bg-gray-950 text-gray-100 min-h-screen;
+  font-family: 'SF Pro Display', 'SF Pro Text', 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.5;
+  font-size: 17px;
+}
+
+::selection {
+  background: #0071e3;
+  color: white;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+/* ── Utilities ── */
+
+.card {
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  border-radius: 18px;
+  padding: 28px;
+  transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Animation */
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-enter {
+  animation: enter 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.animate-enter-d1 {
+  animation-delay: 0.1s;
+}
+
+.animate-enter-d2 {
+  animation-delay: 0.2s;
+}
+
+.animate-enter-d3 {
+  animation-delay: 0.3s;
+}
+
+.animate-enter-d4 {
+  animation-delay: 0.4s;
+}
+
+.animate-enter-d5 {
+  animation-delay: 0.5s;
+}
+
+/* Confidence ring */
+.confidence-ring {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+
+.confidence-ring svg {
+  transform: rotate(-90deg);
+}
+
+.confidence-ring .value {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
