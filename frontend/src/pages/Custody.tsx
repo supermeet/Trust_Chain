@@ -22,25 +22,31 @@ const ROLE_ICONS: Record<string, string> = {
     'Defense Counsel': '🛡️',
 }
 
-const ACTION_COLORS: Record<string, { bg: string; text: string }> = {
-    registered: { bg: 'bg-blue-50 border-blue-200', text: 'text-blue-700' },
-    transfer: { bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-700' },
+const ACTION_STYLES: Record<string, string> = {
+    registered: 'badge-accent',
+    transfer: 'badge-success',
 }
 
-function TimelineEvent({ event, isLast }: { event: any; isLast: boolean }) {
-    const actionStyle = ACTION_COLORS[event.action] || ACTION_COLORS.transfer
+function TimelineEvent({ event, isLast, index }: { event: any; isLast: boolean; index: number }) {
+    const actionCls = ACTION_STYLES[event.action] || ACTION_STYLES.transfer
 
     return (
-        <div className="flex gap-4">
+        <div
+            className="flex gap-4 animate-enter"
+            style={{ animationDelay: `${index * 100}ms` }}
+        >
             {/* Timeline line + dot */}
             <div className="flex flex-col items-center">
-                <div className="w-3 h-3 rounded-full bg-[--text] border-2 border-white shadow-sm shrink-0 mt-1.5" />
-                {!isLast && <div className="w-px flex-1 bg-[--border-light] min-h-[40px]" />}
+                <div
+                    className="w-3 h-3 rounded-full bg-[--accent] border-2 border-[--bg] shrink-0 mt-1.5"
+                    style={{ boxShadow: '0 0 10px var(--accent-glow)' }}
+                />
+                {!isLast && <div className="w-px flex-1 border-l border-dashed border-[rgba(79,142,255,0.3)] min-h-[40px]" />}
             </div>
 
             {/* Event content */}
             <div className="pb-8 flex-1">
-                <div className="bg-[--bg-secondary] rounded-2xl p-5 border border-[--border-light]">
+                <div className="glass-card-static p-5">
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
                             <span className="text-lg">{ROLE_ICONS[event.custodian_role] || '👤'}</span>
@@ -49,7 +55,7 @@ function TimelineEvent({ event, isLast }: { event: any; isLast: boolean }) {
                                 <p className="text-[10px] text-[--text-dim]">{event.custodian_role}</p>
                             </div>
                         </div>
-                        <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full border ${actionStyle.bg} ${actionStyle.text}`}>
+                        <span className={`badge ${actionCls} text-[10px]`}>
                             {event.action}
                         </span>
                     </div>
@@ -82,7 +88,6 @@ export default function Custody() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
-    // Transfer form
     const [showForm, setShowForm] = useState(false)
     const [formName, setFormName] = useState('')
     const [formRole, setFormRole] = useState(VALID_ROLES[0])
@@ -128,12 +133,10 @@ export default function Custody() {
         }
     }
 
-    const inputClass = 'w-full bg-white border border-[--border-light] text-[--text] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[--text]/10 focus:border-[--border] transition-all placeholder:text-[--text-dim]'
-
     return (
         <div className="max-w-2xl mx-auto py-16 animate-enter">
             <div className="flex items-center justify-between mb-2">
-                <h1 className="text-3xl font-semibold text-[--text] tracking-tight">Chain of Custody</h1>
+                <h1 className="font-display text-3xl font-bold text-[--text] tracking-tight">Chain of Custody</h1>
                 <Link
                     to={`/results/${id}`}
                     className="text-xs text-[--link] hover:text-[--link-hover] font-medium transition-colors"
@@ -154,40 +157,40 @@ export default function Custody() {
                     </div>
                 </div>
             ) : error ? (
-                <div className="rounded-2xl border border-red-200 bg-red-50 px-6 py-5 text-red-700">
+                <div className="rounded-2xl border border-[rgba(255,77,109,0.3)] bg-[var(--danger-glow)] px-6 py-5 text-[--danger]">
                     <p className="text-sm">{error}</p>
                 </div>
             ) : (
                 <>
                     {/* Summary */}
-                    <div className="flex gap-4 mb-10 animate-enter animate-enter-d1">
-                        <div className="bg-[--bg-secondary] rounded-2xl p-5 flex-1 text-center">
-                            <div className="text-2xl font-semibold text-[--text]">{chain.length}</div>
+                    <div className="flex gap-4 mb-10">
+                        <div className="glass-card flex-1 text-center !p-5">
+                            <div className="text-2xl font-bold text-[--text]">{chain.length}</div>
                             <div className="text-xs text-[--text-dim] mt-1">Total Custodians</div>
                         </div>
-                        <div className="bg-[--bg-secondary] rounded-2xl p-5 flex-1 text-center">
-                            <div className="text-2xl font-semibold text-emerald-700">✓</div>
+                        <div className="glass-card flex-1 text-center !p-5">
+                            <div className="text-2xl font-bold text-[--success]">✓</div>
                             <div className="text-xs text-[--text-dim] mt-1">No Gaps</div>
                         </div>
-                        <div className="bg-[--bg-secondary] rounded-2xl p-5 flex-1 text-center">
-                            <div className="text-2xl font-semibold text-[--text]">{chain.length}</div>
+                        <div className="glass-card flex-1 text-center !p-5">
+                            <div className="text-2xl font-bold text-[--accent]">{chain.length}</div>
                             <div className="text-xs text-[--text-dim] mt-1">Signatures</div>
                         </div>
                     </div>
 
                     {/* Timeline */}
-                    <div className="mb-8 animate-enter animate-enter-d2">
+                    <div className="mb-8">
                         <h2 className="text-sm font-semibold text-[--text] mb-6">Custody Timeline</h2>
                         {chain.map((event: any, i: number) => (
-                            <TimelineEvent key={i} event={event} isLast={i === chain.length - 1} />
+                            <TimelineEvent key={i} event={event} isLast={i === chain.length - 1} index={i} />
                         ))}
                     </div>
 
-                    {/* Transfer button */}
+                    {/* Transfer */}
                     {!showForm ? (
                         <button
                             onClick={() => setShowForm(true)}
-                            className="w-full py-3.5 bg-[--text] hover:bg-[#333336] text-white text-sm font-medium rounded-full transition-colors animate-enter animate-enter-d3"
+                            className="btn-glow w-full"
                         >
                             Log custody transfer
                         </button>
@@ -200,14 +203,14 @@ export default function Custody() {
                                 value={formName}
                                 onChange={(e) => setFormName(e.target.value)}
                                 placeholder="Custodian name"
-                                className={inputClass}
+                                className="input-dark"
                                 required
                             />
 
                             <select
                                 value={formRole}
                                 onChange={(e) => setFormRole(e.target.value)}
-                                className={inputClass}
+                                className="input-dark"
                             >
                                 {VALID_ROLES.map((role) => (
                                     <option key={role} value={role}>{role}</option>
@@ -219,28 +222,28 @@ export default function Custody() {
                                 value={formBadge}
                                 onChange={(e) => setFormBadge(e.target.value)}
                                 placeholder="Badge number (optional)"
-                                className={inputClass}
+                                className="input-dark"
                             />
 
                             <textarea
                                 value={formNotes}
                                 onChange={(e) => setFormNotes(e.target.value)}
                                 placeholder="Transfer notes (optional)"
-                                className={`${inputClass} min-h-[80px] resize-none`}
+                                className="input-dark min-h-[80px] resize-none"
                             />
 
                             <div className="flex gap-3">
                                 <button
                                     type="submit"
                                     disabled={submitting || !formName.trim()}
-                                    className="flex-1 py-3 bg-[--text] hover:bg-[#333336] disabled:opacity-40 text-white text-sm font-medium rounded-full transition-colors"
+                                    className="btn-glow flex-1"
                                 >
                                     {submitting ? 'Submitting…' : 'Submit Transfer'}
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setShowForm(false)}
-                                    className="px-6 py-3 border border-[--border] text-[--text] text-sm font-medium rounded-full transition-colors hover:bg-[--bg-secondary]"
+                                    className="btn-ghost"
                                 >
                                     Cancel
                                 </button>

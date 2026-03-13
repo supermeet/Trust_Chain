@@ -5,9 +5,9 @@ interface LiabilityCardProps {
 }
 
 const PARTY_CONFIG = [
-  { key: 'user', label: 'User', color: '#1d1d1f' },
-  { key: 'platform', label: 'Platform', color: '#86868b' },
-  { key: 'architect', label: 'Architect', color: '#d2d2d7' },
+  { key: 'user', label: 'User', color: 'var(--danger)' },
+  { key: 'platform', label: 'Platform', color: 'var(--accent)' },
+  { key: 'architect', label: 'Architect', color: 'var(--warn)' },
 ]
 
 function formatFactorName(key: string): string {
@@ -42,18 +42,25 @@ function getFactorEntries(factors: any): [string, any][] {
 export default function LiabilityCard({ scores }: LiabilityCardProps) {
   if (!scores) return null
 
+  const total = PARTY_CONFIG.reduce((sum, { key }) => sum + getPercentage(scores[key]), 0)
+
   return (
     <div>
       <h3 className="text-sm font-semibold text-[--text] mb-5">Liability distribution</h3>
 
-      <div className="flex rounded-full overflow-hidden h-3 mb-4 w-full bg-[--bg-secondary]">
+      {/* Stacked bar */}
+      <div className="flex rounded-full overflow-hidden h-3 mb-4 w-full bg-[--surface-3]">
         {PARTY_CONFIG.map(({ key, color }) => {
-          const rawPct = getPercentage(scores[key])
+          const pct = total > 0 ? (getPercentage(scores[key]) / total) * 100 : 33.33
           return (
             <div
               key={key}
-              className="transition-all"
-              style={{ width: `${Math.max(0, rawPct)}%`, backgroundColor: color }}
+              className="transition-all duration-700"
+              style={{
+                width: `${pct}%`,
+                backgroundColor: color,
+                boxShadow: `0 0 10px ${color}`,
+              }}
             />
           )
         })}
@@ -78,7 +85,7 @@ export default function LiabilityCard({ scores }: LiabilityCardProps) {
           if (!party) return null
           const factors = getFactorEntries(party.factors)
           return (
-            <div key={key}>
+            <div key={key} className="glass-card-static p-5">
               <h4 className="text-xs font-semibold mb-3 text-[--text]">{label}</h4>
               <div className="space-y-1.5">
                 {factors.map(([factor, value]) => (
@@ -90,7 +97,7 @@ export default function LiabilityCard({ scores }: LiabilityCardProps) {
                   </div>
                 ))}
               </div>
-              <div className="mt-3 pt-2.5 border-t border-[--border-light] flex justify-between text-xs">
+              <div className="mt-3 pt-2.5 border-t border-[--border-subtle] flex justify-between text-xs">
                 <span className="text-[--text-dim]">Raw</span>
                 <span className="text-[--text] font-semibold">{getRawScore(party).toFixed(3)}</span>
               </div>

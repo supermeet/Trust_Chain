@@ -15,21 +15,15 @@ function StatusBanner({ result }: { result: VerifyResult }) {
 
   const config = {
     verified: {
-      bg: 'bg-green-50',
-      border: 'border-green-200',
-      text: 'text-green-700',
+      cls: 'bg-[var(--success-glow)] border-[rgba(45,212,191,0.3)] text-[--success]',
       label: `Verified — unmodified since ${result.timestamp ? new Date(result.timestamp).toLocaleString() : 'recorded time'}`,
     },
     mismatch: {
-      bg: 'bg-red-50',
-      border: 'border-red-200',
-      text: 'text-red-700',
+      cls: 'bg-[var(--danger-glow)] border-[rgba(255,77,109,0.3)] text-[--danger]',
       label: 'Hash mismatch — possible tampering detected',
     },
     not_found: {
-      bg: 'bg-yellow-50',
-      border: 'border-yellow-200',
-      text: 'text-yellow-800',
+      cls: 'bg-[var(--warn-glow)] border-[rgba(245,158,11,0.3)] text-[--warn]',
       label: 'No record found on blockchain',
     },
   }
@@ -38,9 +32,9 @@ function StatusBanner({ result }: { result: VerifyResult }) {
   if (!c) return null
 
   return (
-    <div className={`rounded-2xl px-5 py-4 border ${c.border} ${c.bg} animate-enter`}>
-      <p className={`font-semibold text-sm ${c.text}`}>{c.label}</p>
-      {result.message && <p className="text-sm mt-1 text-[--text-dim]">{result.message}</p>}
+    <div className={`rounded-2xl px-5 py-4 border ${c.cls} animate-enter`}>
+      <p className="font-semibold text-sm">{c.label}</p>
+      {result.message && <p className="text-sm mt-1 opacity-70">{result.message}</p>}
     </div>
   )
 }
@@ -126,22 +120,20 @@ export default function Verify() {
   }
 
   const tabClass = (tab: TabType) =>
-    `px-4 py-2 text-sm font-medium transition-colors rounded-full ${activeTab === tab
-      ? 'bg-[--text] text-white'
+    `px-4 py-2 text-sm font-medium transition-all rounded-full ${activeTab === tab
+      ? 'bg-[--accent] text-white shadow-[0_0_15px_rgba(79,142,255,0.3)]'
       : 'text-[--text-secondary] hover:text-[--text]'
     }`
 
-  const inputClass = 'w-full bg-[--bg-secondary] border border-[--border-light] text-[--text] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[--text]/10 focus:border-[--border] transition-all placeholder:text-[--text-dim]'
-
   return (
     <div className="max-w-xl mx-auto py-16 animate-enter">
-      <h1 className="text-3xl font-semibold text-[--text] tracking-tight mb-2">Verify evidence</h1>
+      <h1 className="font-display text-3xl font-bold text-[--text] tracking-tight mb-2">Verify evidence</h1>
       <p className="text-base text-[--text-secondary] mb-10">
         Check if a file or event is registered on the blockchain.
       </p>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-8 bg-[--bg-secondary] p-1 rounded-full w-fit">
+      <div className="flex gap-2 mb-8 bg-[--surface-2] p-1 rounded-full w-fit border border-[--border-subtle]">
         <button className={tabClass('id')} onClick={() => setActiveTab('id')}>By Event ID</button>
         <button className={tabClass('file')} onClick={() => setActiveTab('file')}>By File</button>
       </div>
@@ -156,17 +148,17 @@ export default function Verify() {
               onChange={(e) => setEventId(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && lookupById()}
               placeholder="Paste event ID…"
-              className={`flex-1 ${inputClass}`}
+              className="input-dark flex-1"
             />
             <button
               onClick={lookupById}
               disabled={idLoading || !eventId.trim()}
-              className="px-6 py-3 bg-[#1d1d1f] hover:bg-[#333336] disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium rounded-full transition-colors shrink-0"
+              className="btn-glow !px-6 !py-3 shrink-0"
             >
               {idLoading ? '…' : 'Lookup'}
             </button>
           </div>
-          {idError && <p className="text-red-600 text-sm">{idError}</p>}
+          {idError && <p className="text-[--danger] text-sm">{idError}</p>}
           {idResult && <StatusBanner result={idResult} />}
         </div>
       )}
@@ -174,7 +166,12 @@ export default function Verify() {
       {/* By File */}
       {activeTab === 'file' && (
         <div className="space-y-4">
-          <div className="border-2 border-dashed border-[--border-light] rounded-2xl p-10 text-center cursor-pointer hover:border-[--border] transition-colors"
+          <div
+            className={`border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all ${
+              fileInput
+                ? 'border-[--border-strong] bg-[--surface-2]'
+                : 'border-[--border-strong] hover:border-[--accent] bg-[--surface-1]'
+            }`}
             onClick={() => document.getElementById('verify-file')?.click()}
           >
             <input
@@ -199,12 +196,12 @@ export default function Verify() {
           <button
             onClick={verifyFile}
             disabled={fileLoading || !fileInput}
-            className="w-full py-3.5 bg-[--text] hover:bg-[#333336] disabled:opacity-40 text-white text-sm font-medium rounded-full transition-colors"
+            className="btn-glow w-full"
           >
             {fileLoading ? 'Verifying…' : 'Verify file'}
           </button>
 
-          {fileError && <p className="text-red-600 text-sm">{fileError}</p>}
+          {fileError && <p className="text-[--danger] text-sm">{fileError}</p>}
           {fileResult && <StatusBanner result={fileResult} />}
         </div>
       )}

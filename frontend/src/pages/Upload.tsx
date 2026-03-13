@@ -35,13 +35,9 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
         role="switch"
         aria-checked={checked}
         onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-[22px] w-[40px] shrink-0 items-center rounded-full transition-colors ${checked ? 'bg-[--text]' : 'bg-[--border]'
-          }`}
+        className="toggle-track"
       >
-        <span
-          className={`inline-block h-[18px] w-[18px] rounded-full bg-white shadow-sm transition-transform ${checked ? 'translate-x-[20px]' : 'translate-x-[2px]'
-            }`}
-        />
+        <span className="toggle-thumb" />
       </button>
       <span className="text-sm text-[--text-secondary] group-hover:text-[--text] transition-colors">{label}</span>
     </label>
@@ -103,16 +99,14 @@ export default function Upload() {
     }
   }
 
-  const inputClass = 'w-full bg-[--bg-secondary] border border-[--border-light] text-[--text] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[--text]/10 focus:border-[--border] transition-all placeholder:text-[--text-dim]'
-
   return (
     <div className="max-w-xl mx-auto py-16 animate-enter">
-      <h1 className="text-3xl font-semibold text-[--text] tracking-tight mb-2">Submit a file</h1>
+      <h1 className="font-display text-3xl font-bold text-[--text] tracking-tight mb-2">Submit a file</h1>
       <p className="text-base text-[--text-secondary] mb-10">
         Upload audio or video for deepfake analysis and blockchain certification.
       </p>
 
-      <hr className="border-[--border-light] mb-8" />
+      <hr className="mb-8" />
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <FileUpload onFileSelect={setSelectedFile} selectedFile={selectedFile} />
@@ -128,7 +122,7 @@ export default function Upload() {
               </div>
             </div>
 
-            <hr className="border-[--border-light]" />
+            <hr />
 
             <div className="animate-enter animate-enter-d2">
               <h2 className="text-sm font-semibold text-[--text] mb-4">Platform details</h2>
@@ -138,7 +132,7 @@ export default function Upload() {
                   <select
                     value={form.platform_name}
                     onChange={(e) => setText('platform_name', e.target.value)}
-                    className={inputClass}
+                    className="input-dark"
                   >
                     {['YouTube', 'Instagram', 'WhatsApp', 'X', 'Telegram', 'Other'].map((p) => (
                       <option key={p} value={p}>{p}</option>
@@ -151,7 +145,7 @@ export default function Upload() {
                 {form.takedown_requested && (
                   <div>
                     <label className="block text-xs text-[--text-dim] mb-1.5">Response time (hours)</label>
-                    <input type="number" min="0" value={form.response_hours} onChange={(e) => setText('response_hours', e.target.value)} placeholder="e.g. 48" className={inputClass} />
+                    <input type="number" min="0" value={form.response_hours} onChange={(e) => setText('response_hours', e.target.value)} placeholder="e.g. 48" className="input-dark" />
                   </div>
                 )}
 
@@ -159,12 +153,12 @@ export default function Upload() {
 
                 <div>
                   <label className="block text-xs text-[--text-dim] mb-1.5">Estimated reach (views)</label>
-                  <input type="number" min="0" value={form.estimated_reach} onChange={(e) => setText('estimated_reach', e.target.value)} placeholder="e.g. 50000" className={inputClass} />
+                  <input type="number" min="0" value={form.estimated_reach} onChange={(e) => setText('estimated_reach', e.target.value)} placeholder="e.g. 50000" className="input-dark" />
                 </div>
               </div>
             </div>
 
-            <hr className="border-[--border-light]" />
+            <hr />
 
             <div className="animate-enter animate-enter-d3">
               <h2 className="text-sm font-semibold text-[--text] mb-1">AI model</h2>
@@ -174,12 +168,12 @@ export default function Upload() {
                 value={form.model_name}
                 onChange={(e) => setText('model_name', e.target.value)}
                 placeholder="e.g. Stable Diffusion, ElevenLabs, Midjourney…"
-                className={inputClass}
+                className="input-dark"
               />
             </div>
 
             {error && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 text-sm">
+              <div className="rounded-xl border border-[rgba(255,77,109,0.3)] bg-[var(--danger-glow)] px-4 py-3 text-[--danger] text-sm">
                 {error}
               </div>
             )}
@@ -187,7 +181,7 @@ export default function Upload() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 bg-[--text] hover:bg-[#333336] disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium rounded-full transition-colors text-sm flex items-center justify-center gap-2"
+              className="btn-glow w-full"
             >
               {loading ? (
                 <>
